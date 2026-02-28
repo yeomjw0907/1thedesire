@@ -8,6 +8,15 @@
     'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
     })(window,document,'script','dataLayer','GTM-M6NVVQQN');</script>
     <!-- End Google Tag Manager -->
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-GVZ6LMVXH9"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-GVZ6LMVXH9');
+    </script>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Sungshin Company 2025</title>
@@ -48,6 +57,23 @@
         0% { transform: translateY(0px) rotate(0deg); }
         50% { transform: translateY(-20px) rotate(5deg); }
         100% { transform: translateY(0px) rotate(0deg); }
+      }
+      @keyframes backgroundPulse1 {
+        0%, 100% { transform: scale(1) rotate(0deg); }
+        50% { transform: scale(1.1) rotate(5deg); }
+      }
+      @keyframes backgroundPulse2 {
+        0%, 100% { transform: scale(1) rotate(0deg); }
+        50% { transform: scale(1.1) rotate(-5deg); }
+      }
+      .bg-animation-1 {
+        animation: backgroundPulse1 20s ease-in-out infinite;
+        will-change: transform;
+      }
+      .bg-animation-2 {
+        animation: backgroundPulse2 15s ease-in-out infinite;
+        animation-delay: 1s;
+        will-change: transform;
       }
     </style>
   <script type="importmap">

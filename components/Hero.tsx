@@ -1,6 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Calculator, AlertCircle, TrendingDown, MessageCircle, ExternalLink, Copy, Phone } from 'lucide-react';
+
+// Google Analytics 타입 선언
+declare global {
+  interface Window {
+    gtag?: (...args: any[]) => void;
+    dataLayer?: any[];
+  }
+}
 
 // 카테고리별 요율 데이터
 const categoryData: Record<string, Record<string, { dutyRate: number; vatRate: number }>> = {
@@ -103,6 +111,7 @@ const Hero: React.FC = () => {
   const [exchangeRate, setExchangeRate] = useState<string>('190');
   const [weight, setWeight] = useState<string>('');
   const [copied, setCopied] = useState<boolean>(false);
+  const hasTrackedCalculation = useRef<boolean>(false);
 
   // 소분류 옵션
   const subCategoryOptions = mainCategory ? Object.keys(categoryData[mainCategory] || {}) : [];
@@ -113,8 +122,27 @@ const Hero: React.FC = () => {
       await navigator.clipboard.writeText(window.location.href);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+      
+      // Google Analytics 이벤트 전송
+      if (window.gtag) {
+        window.gtag('event', 'link_copied', {
+          event_category: 'CTA',
+          event_label: 'Link Copy Button'
+        });
+      }
     } catch (err) {
       console.error('링크 복사 실패:', err);
+    }
+  };
+
+  // 문의 버튼 클릭 추적 함수
+  const trackInquiryClick = (type: 'kakao' | 'phone' | 'website') => {
+    if (window.gtag) {
+      window.gtag('event', 'inquiry_clicked', {
+        event_category: 'CTA',
+        event_label: type === 'kakao' ? 'Kakao Inquiry' : type === 'phone' ? 'Phone Inquiry' : 'Website Visit',
+        inquiry_type: type
+      });
     }
   };
 
@@ -122,6 +150,7 @@ const Hero: React.FC = () => {
   // 계산 결과
   const calculationResult = useMemo(() => {
     if (!mainCategory || !subCategory || !purchasePrice || !exchangeRate || !weight) {
+      hasTrackedCalculation.current = false;
       return null;
     }
 
@@ -130,14 +159,45 @@ const Hero: React.FC = () => {
     const w = parseFloat(weight);
 
     if (isNaN(price) || isNaN(rate) || isNaN(w) || price <= 0 || rate <= 0 || w <= 0) {
+      hasTrackedCalculation.current = false;
       return null;
     }
 
     const categoryInfo = categoryData[mainCategory]?.[subCategory];
-    if (!categoryInfo) return null;
+    if (!categoryInfo) {
+      hasTrackedCalculation.current = false;
+      return null;
+    }
 
     return calculateTax(price, rate, w, categoryInfo.dutyRate, categoryInfo.vatRate);
   }, [mainCategory, subCategory, purchasePrice, exchangeRate, weight]);
+
+  // 계산 완료 이벤트 추적
+  useEffect(() => {
+    if (calculationResult && !hasTrackedCalculation.current) {
+      hasTrackedCalculation.current = true;
+      
+      // Google Analytics 이벤트 전송
+      if (window.gtag) {
+        window.gtag('event', 'calculation_completed', {
+          event_category: 'Calculator',
+          event_label: `${mainCategory} - ${subCategory}`,
+          value: Math.round(calculationResult.totalTax),
+          currency: 'KRW',
+          // GA4 커스텀 파라미터
+          main_category: mainCategory,
+          sub_category: subCategory,
+          purchase_price: parseFloat(purchasePrice),
+          exchange_rate: parseFloat(exchangeRate),
+          weight: parseFloat(weight),
+          total_tax: Math.round(calculationResult.totalTax),
+          duty: Math.round(calculationResult.duty),
+          vat: Math.round(calculationResult.vat),
+          shipping_cost: Math.round(calculationResult.shippingCost)
+        });
+      }
+    }
+  }, [calculationResult, mainCategory, subCategory, purchasePrice, exchangeRate, weight]);
 
   const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat('ko-KR').format(Math.round(value));
@@ -146,17 +206,9 @@ const Hero: React.FC = () => {
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-blue-50 via-white to-slate-50 py-12 md:py-20 px-4">
       {/* Background Decoration */}
-      <div className="absolute inset-0 z-0 overflow-hidden">
-        <motion.div
-          animate={{ scale: [1, 1.1, 1], rotate: [0, 5, 0] }}
-          transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-0 right-0 w-96 h-96 bg-sungshin-cyan/10 rounded-full blur-[100px] pointer-events-none"
-        />
-        <motion.div
-          animate={{ scale: [1, 1.1, 1], rotate: [0, -5, 0] }}
-          transition={{ duration: 15, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-          className="absolute bottom-0 left-0 w-96 h-96 bg-sungshin-pink/10 rounded-full blur-[100px] pointer-events-none"
-        />
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-sungshin-cyan/10 rounded-full blur-[100px] bg-animation-1" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-sungshin-pink/10 rounded-full blur-[100px] bg-animation-2" />
       </div>
 
       <div className="container mx-auto max-w-4xl relative z-10">
@@ -406,6 +458,7 @@ const Hero: React.FC = () => {
                 rel="noopener noreferrer"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                onClick={() => trackInquiryClick('kakao')}
                 className="inline-flex items-center justify-center gap-3 bg-white text-sungshin-cyan px-6 py-4 rounded-xl font-bold text-base md:text-lg shadow-lg hover:shadow-xl transition-all"
               >
                 <MessageCircle className="w-5 h-5 md:w-6 md:h-6" />
@@ -417,6 +470,7 @@ const Hero: React.FC = () => {
                 href="tel:010-8387-8847"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                onClick={() => trackInquiryClick('phone')}
                 className="inline-flex items-center justify-center gap-3 bg-white text-sungshin-cyan px-6 py-4 rounded-xl font-bold text-base md:text-lg shadow-lg hover:shadow-xl transition-all"
               >
                 <Phone className="w-5 h-5 md:w-6 md:h-6" />
@@ -436,6 +490,7 @@ const Hero: React.FC = () => {
                 rel="noopener noreferrer"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                onClick={() => trackInquiryClick('website')}
                 className="inline-flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white px-5 py-3 rounded-xl font-semibold text-sm md:text-base shadow-md hover:shadow-lg transition-all border border-white/30"
               >
                 <ExternalLink className="w-4 h-4 md:w-5 md:h-5" />
