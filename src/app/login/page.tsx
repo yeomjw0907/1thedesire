@@ -2,6 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import Link from 'next/link'
 import { GoogleLoginButton } from '@/components/auth/GoogleLoginButton'
+import { TwitterLoginButton } from '@/components/auth/TwitterLoginButton'
 import { LegalModal } from '@/components/legal/LegalModal'
 
 /**
@@ -58,6 +59,7 @@ export default async function LoginPage({
         {/* 로그인 버튼 */}
         <div className="space-y-3">
           <GoogleLoginButton />
+          <TwitterLoginButton />
 
           <p className="text-center text-text-muted text-xs mt-6 leading-relaxed">
             원치 않는 요청은 언제든 거절하거나 차단할 수 있습니다

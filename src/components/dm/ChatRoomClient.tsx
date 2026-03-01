@@ -58,8 +58,8 @@ export function ChatRoomClient({ room, messages, currentUserId, otherNickname }:
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages', filter: `room_id=eq.${room.id}` },
-        (payload) => {
-          const newMsg = payload.new as Message
+        (payload: { new: Message }) => {
+          const newMsg = payload.new
           // 본인이 보낸 메시지는 이미 optimistic update로 추가됐을 수 있으므로 중복 방지
           setLocalMessages((prev) =>
             prev.some((m) => m.id === newMsg.id) ? prev : [...prev, newMsg]
