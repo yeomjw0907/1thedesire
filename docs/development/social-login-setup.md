@@ -33,15 +33,22 @@
 - **Client ID**: X Developer Portal에서 발급한 OAuth 2.0 Client ID.
 - **Client Secret**: 위 앱의 Client Secret.
 
-### 2-3. Redirect URL (공통)
+### 2-3. Email (매직 링크)
+
+- **Email** 프로바이더 **Enable** (이메일로 로그인 링크 발송).
+- 매직 링크 클릭 시 앱이 `emailRedirectTo`로 리다이렉트하므로, **Redirect URLs**에 `/auth/confirm` URL을 추가해야 함 (아래 2-4 참고).
+
+### 2-4. Redirect URL (공통)
 
 **경로**: Authentication → **URL Configuration**
 
 - **Site URL**: 실제 서비스 URL (예: `https://1thedesire.com` 또는 로컬 `http://localhost:3000`).
 - **Redirect URLs**에 다음을 모두 추가:
   - `http://localhost:3000/auth/callback`
-  - `https://1thedesire.com/auth/callback`  
-  (배포 도메인이 다르면 해당 URL도 추가)
+  - `http://localhost:3000/auth/confirm`
+  - `https://1thedesire.com/auth/callback`
+  - `https://1thedesire.com/auth/confirm`  
+  (배포 도메인이 다르면 해당 도메인의 `/auth/callback`, `/auth/confirm`도 추가)
 
 ---
 

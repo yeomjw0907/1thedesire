@@ -28,7 +28,7 @@ export default async function ProfileDetailPage({
   // 최근 게시글 (최신 5개)
   const { data: posts } = await supabase
     .from('posts')
-    .select('id, content, image_url, created_at')
+    .select('id, content, image_url, tags, created_at')
     .eq('user_id', id)
     .eq('status', 'published')
     .order('created_at', { ascending: false })
@@ -89,15 +89,10 @@ export default async function ProfileDetailPage({
         </p>
         {profile.role && (
           <div className="flex flex-wrap gap-1.5">
-            {splitTags(profile.role).map((tag, i) => (
-              <span
-                key={i}
-                className="px-2.5 py-0.5 rounded-chip text-xs
-                           bg-surface-750 text-text-secondary border border-surface-700"
-              >
-                {tag}
-              </span>
-            ))}
+            <span className="px-2.5 py-0.5 rounded-chip text-xs
+                           bg-surface-750 text-text-secondary border border-surface-700">
+              {profile.role.split(/[,·\s·]+/)[0]?.trim() ?? profile.role}
+            </span>
           </div>
         )}
       </section>
@@ -138,24 +133,42 @@ export default async function ProfileDetailPage({
             최근 분위기
           </h2>
           <div className="space-y-3">
-            {posts.map((post) => (
-              <div key={post.id} className="card">
-                {post.image_url && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={post.image_url}
-                    alt=""
-                    className="w-full max-h-40 object-cover rounded-xl mb-3 opacity-80"
-                  />
-                )}
-                <p className="text-text-primary text-sm leading-relaxed line-clamp-4">
-                  {post.content}
-                </p>
-                <p className="text-text-muted text-xs mt-2">
-                  {formatTimeAgo(post.created_at)}
-                </p>
-              </div>
-            ))}
+            {posts.map((post) => {
+              const postTags = post.tags
+                ? post.tags.split(/[,·\s·]+/).map((t) => t.trim()).filter(Boolean)
+                : []
+              return (
+                <div key={post.id} className="card">
+                  {post.image_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={post.image_url}
+                      alt=""
+                      className="w-full max-h-40 object-cover rounded-xl mb-3 opacity-80"
+                    />
+                  )}
+                  {postTags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {postTags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="px-2 py-0.5 rounded-chip text-[11px]
+                                     bg-surface-750 text-text-muted border border-surface-700"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-text-primary text-sm leading-relaxed line-clamp-4">
+                    {post.content}
+                  </p>
+                  <p className="text-text-muted text-xs mt-2">
+                    {formatTimeAgo(post.created_at)}
+                  </p>
+                </div>
+              )
+            })}
           </div>
         </section>
       )}
@@ -205,13 +218,6 @@ function genderLabel(gender: string): string {
   if (gender === 'male') return '남성'
   if (gender === 'female') return '여성'
   return '기타'
-}
-
-function splitTags(role: string): string[] {
-  return role
-    .split(/[,·\s·]+/)
-    .map((t) => t.trim())
-    .filter(Boolean)
 }
 
 function getLastActive(updatedAt: string): string {

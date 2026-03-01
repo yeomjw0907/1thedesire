@@ -13,7 +13,7 @@ import type { Profile, Post } from '@/types'
  */
 
 const QUICK_REGIONS = ['서울', '경기', '인천', '부산', '대구', '광주', '대전'] as const
-const QUICK_ROLES = ['Dom', 'Sub', 'Switch', 'FWB', '감성 연애', '대화 위주'] as const
+const QUICK_ROLES = ['Dom', 'Sub', 'Switch'] as const
 
 export default async function SearchPage({
   searchParams,
@@ -50,7 +50,7 @@ export default async function SearchPage({
       let query = supabase
         .from('posts')
         .select(`
-          id, content, created_at,
+          id, content, tags, created_at,
           profiles:user_id (id, nickname, age_group, region, role)
         `)
         .eq('status', 'published')
@@ -151,7 +151,7 @@ export default async function SearchPage({
 }
 
 type ProfileResult = Pick<Profile, 'id' | 'nickname' | 'gender' | 'age_group' | 'region' | 'role' | 'bio'>
-type PostResult = Pick<Post, 'id' | 'content' | 'created_at'> & {
+type PostResult = Pick<Post, 'id' | 'content' | 'tags' | 'created_at'> & {
   profiles: Pick<Profile, 'id' | 'nickname' | 'age_group' | 'region' | 'role'> | null
 }
 
@@ -168,9 +168,9 @@ function TabLink({ href, active, children }: { href: string; active: boolean; ch
 }
 
 function ProfileCard({ profile }: { profile: ProfileResult }) {
-  const tags = profile.role
-    ? profile.role.split(/[,·\s·]+/).filter(Boolean).slice(0, 3)
-    : []
+  const roleLabel = profile.role
+    ? profile.role.split(/[,·\s·]+/)[0]?.trim() ?? profile.role
+    : null
 
   return (
     <Link href={`/profile/${profile.id}`} className="block">
@@ -181,15 +181,11 @@ function ProfileCard({ profile }: { profile: ProfileResult }) {
             <p className="text-text-muted text-xs mt-0.5">
               {profile.age_group} · {profile.region}
             </p>
-            {tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {tags.map((tag) => (
-                  <span key={tag} className="px-2 py-0.5 rounded-chip text-[11px]
-                                            bg-surface-750 text-text-muted border border-surface-700">
-                    {tag}
-                  </span>
-                ))}
-              </div>
+            {roleLabel && (
+              <span className="inline-block mt-2 px-2 py-0.5 rounded-chip text-[11px]
+                            bg-surface-750 text-text-muted border border-surface-700">
+                {roleLabel}
+              </span>
             )}
           </div>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
@@ -210,14 +206,32 @@ function ProfileCard({ profile }: { profile: ProfileResult }) {
 
 function PostCard({ post }: { post: PostResult }) {
   const profile = post.profiles
+  const roleLabel = profile?.role ? profile.role.split(/[,·\s·]+/)[0]?.trim() ?? profile.role : null
+  const postTags = post.tags
+    ? post.tags.split(/[,·\s·]+/).map((t) => t.trim()).filter(Boolean)
+    : []
   return (
     <article className="card">
       {profile && (
-        <div className="flex items-baseline gap-2 mb-2">
-          <Link href={`/profile/${profile.id}`} className="text-text-strong font-medium text-sm">
-            {profile.nickname}
-          </Link>
-          <span className="text-text-muted text-xs">{profile.age_group} · {profile.region}</span>
+        <div className="mb-2">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <Link href={`/profile/${profile.id}`} className="text-text-strong font-medium text-sm">
+              {profile.nickname}
+            </Link>
+            {roleLabel && (
+              <span className="px-2 py-0.5 rounded-chip text-[11px]
+                             bg-surface-750 text-text-muted border border-surface-700">
+                {roleLabel}
+              </span>
+            )}
+            {postTags.map((tag) => (
+              <span key={tag} className="px-2 py-0.5 rounded-chip text-[11px]
+                             bg-surface-750 text-text-muted border border-surface-700">
+                {tag}
+              </span>
+            ))}
+          </div>
+          <p className="text-text-muted text-xs mt-0.5">{profile.age_group} · {profile.region}</p>
         </div>
       )}
       <p className="text-text-primary text-[14px] leading-6 line-clamp-4 whitespace-pre-wrap">

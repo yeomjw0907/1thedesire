@@ -58,15 +58,10 @@ export default async function MyProfilePage() {
 
         {profile.role && (
           <div className="flex flex-wrap gap-1.5 mt-2.5">
-            {splitTags(profile.role).map((tag, i) => (
-              <span
-                key={i}
-                className="px-2.5 py-0.5 rounded-chip text-xs
-                           bg-surface-750 text-text-secondary border border-surface-700"
-              >
-                {tag}
-              </span>
-            ))}
+            <span className="px-2.5 py-0.5 rounded-chip text-xs
+                           bg-surface-750 text-text-secondary border border-surface-700">
+              {profile.role.split(/[,·\s·]+/)[0]?.trim() ?? profile.role}
+            </span>
           </div>
         )}
       </header>
@@ -144,13 +139,6 @@ function genderLabel(gender: string): string {
   if (gender === 'male') return '남성'
   if (gender === 'female') return '여성'
   return '기타'
-}
-
-function splitTags(role: string): string[] {
-  return role
-    .split(/[,·\s·]+/)
-    .map((t) => t.trim())
-    .filter(Boolean)
 }
 
 function formatTimeAgo(dateString: string): string {

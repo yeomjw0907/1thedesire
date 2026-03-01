@@ -6,6 +6,8 @@ import { createPost } from '@/lib/actions/posts'
 import type { ApiResponse } from '@/types'
 
 const MAX_CHARS = 300
+const TAGS_SEP = ' · '
+const POST_TAG_OPTIONS = ['FWB', '감성 연애', '대화 위주', '만남 위주'] as const
 
 export default function WritePostPage() {
   const [state, action, isPending] = useActionState<ApiResponse | null, FormData>(
@@ -14,7 +16,14 @@ export default function WritePostPage() {
   )
   const [content, setContent] = useState('')
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  function toggleTag(value: string) {
+    setSelectedTags((prev) =>
+      prev.includes(value) ? prev.filter((t) => t !== value) : [...prev, value]
+    )
+  }
 
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -104,6 +113,28 @@ export default function WritePostPage() {
             </button>
           </div>
         )}
+
+        {/* 글 태그 (선택) */}
+        <div className="px-5 pt-4 pb-2 border-t border-surface-700/50">
+          <p className="text-text-muted text-xs font-medium mb-2">이 글의 맥락 (선택)</p>
+          <div className="flex flex-wrap gap-2">
+            {POST_TAG_OPTIONS.map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => toggleTag(tag)}
+                className={`min-h-[40px] px-3 py-2 rounded-chip text-xs font-medium transition-colors
+                  ${selectedTags.includes(tag)
+                    ? 'bg-desire-500/20 text-desire-400 border border-desire-500/40'
+                    : 'bg-surface-700 text-text-secondary border border-transparent hover:bg-surface-750'
+                  }`}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+          <input type="hidden" name="tags" value={selectedTags.join(TAGS_SEP)} />
+        </div>
 
         {/* 파일 입력 (hidden) */}
         <input

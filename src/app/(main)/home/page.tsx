@@ -39,6 +39,7 @@ export default async function HomePage({
       id,
       content,
       image_url,
+      tags,
       is_auto_generated,
       created_at,
       profiles:user_id (
@@ -143,12 +144,22 @@ type PostWithProfile = Post & {
   profiles: Pick<Profile, 'id' | 'nickname' | 'gender' | 'age_group' | 'region' | 'role'>
 }
 
+function roleChip(role: string | null): string | null {
+  if (!role) return null
+  const first = role.split(/[,·\s·]+/)[0]?.trim()
+  return first || null
+}
+
+function postTagsList(tags: string | null): string[] {
+  if (!tags) return []
+  return tags.split(/[,·\s·]+/).map((t) => t.trim()).filter(Boolean).slice(0, 3)
+}
+
 function PostCard({ post }: { post: PostWithProfile }) {
   const profile = post.profiles
   const timeAgo = formatTimeAgo(post.created_at)
-  const tags = profile.role
-    ? profile.role.split(/[,·\s·]+/).filter(Boolean).slice(0, 2)
-    : []
+  const roleLabel = roleChip(profile.role)
+  const tags = postTagsList(post.tags ?? null)
 
   return (
     <article className="card">
@@ -157,6 +168,12 @@ function PostCard({ post }: { post: PostWithProfile }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2 flex-wrap">
             <p className="text-text-strong font-medium text-sm">{profile.nickname}</p>
+            {roleLabel && (
+              <span className="px-2 py-0.5 rounded-chip text-[11px]
+                             bg-surface-750 text-text-muted border border-surface-700">
+                {roleLabel}
+              </span>
+            )}
             {tags.map((tag) => (
               <span
                 key={tag}

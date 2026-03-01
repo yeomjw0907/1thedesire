@@ -58,6 +58,7 @@ export interface Post {
   user_id: string
   content: string
   image_url: string | null
+  tags: string | null
   is_auto_generated: boolean
   status: PostStatus
   created_at: string

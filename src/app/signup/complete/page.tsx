@@ -94,6 +94,13 @@ export default async function SignupCompletePage({
           홈 피드 보기
         </Link>
 
+        <Link
+          href="/profile"
+          className="block text-center text-text-muted text-sm mt-3 active:text-text-secondary transition-colors"
+        >
+          내 프로필 보기
+        </Link>
+
         <p className="text-center text-text-muted text-xs mt-4">
           글과 분위기로 먼저 사람을 읽어보세요
         </p>

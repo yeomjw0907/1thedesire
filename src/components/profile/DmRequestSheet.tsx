@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { sendDmRequest } from '@/lib/actions/dm'
 import { POINTS } from '@/types'
@@ -82,12 +83,23 @@ export function DmRequestSheet({ targetUserId, targetProfile, myPoints }: Props)
               <PolicyRow label={`상대가 거절하면 ${POINTS.DM_DECLINE_REFUND}P가 환불됩니다`} variant="refund" />
               <PolicyRow label="24시간 내 응답이 없으면 전액 환불됩니다" variant="refund" />
               <PolicyRow label="수락 후 대화는 무료입니다" variant="free" />
+              <PolicyRow label="차단 또는 요청 취소 시에는 환불되지 않습니다" variant="debit" />
             </div>
 
             {!hasPoints && (
-              <div className="mb-4 px-4 py-3 bg-state-warning/10 rounded-xl
-                              text-state-warning text-sm border border-state-warning/20">
-                포인트가 부족합니다. 현재 {myPoints}P 보유 중입니다
+              <div className="mb-4 space-y-2">
+                <div className="px-4 py-3 bg-state-warning/10 rounded-xl
+                                text-state-warning text-sm border border-state-warning/20">
+                  포인트가 부족합니다. 현재 {myPoints}P 보유 중입니다
+                </div>
+                <Link
+                  href="/points"
+                  className="block w-full py-3 rounded-chip bg-desire-500/15 text-desire-400
+                             text-sm font-semibold text-center active:bg-desire-500/25 transition-colors"
+                  onClick={() => setOpen(false)}
+                >
+                  포인트 충전하러 가기
+                </Link>
               </div>
             )}
 

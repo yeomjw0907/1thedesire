@@ -28,8 +28,8 @@ export async function updateProfile(
   if (!region || !(REGIONS as readonly string[]).includes(region)) {
     return { success: false, data: null, error: { code: 'INVALID_REGION', message: '올바른 지역을 선택해주세요' } }
   }
-  if (!role || role.length > 50) {
-    return { success: false, data: null, error: { code: 'INVALID_ROLE', message: '성향은 50자 이내로 입력해주세요' } }
+  if (!role || !['Dom', 'Sub', 'Switch'].includes(role)) {
+    return { success: false, data: null, error: { code: 'INVALID_ROLE', message: '성향을 선택해 주세요.' } }
   }
   if (!bio || bio.length > 300) {
     return { success: false, data: null, error: { code: 'INVALID_BIO', message: '자기소개는 300자 이내로 입력해주세요' } }

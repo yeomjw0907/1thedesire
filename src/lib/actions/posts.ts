@@ -16,6 +16,8 @@ export async function createPost(
   }
 
   const content = (formData.get('content') as string | null)?.trim() ?? ''
+  const tagsRaw = (formData.get('tags') as string | null)?.trim() ?? ''
+  const tags = tagsRaw.length > 0 ? tagsRaw.slice(0, 100) : null
   const imageFile = formData.get('image') as File | null
 
   if (content.length < 10) {
@@ -51,6 +53,7 @@ export async function createPost(
       user_id: user.id,
       content,
       image_url,
+      tags,
       is_auto_generated: false,
       status: 'published',
     })

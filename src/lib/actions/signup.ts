@@ -201,6 +201,9 @@ function validateSignupInput(input: SignupInput): { code: string; message: strin
   if (!input.role) {
     return { code: 'ROLE_REQUIRED', message: '아직 입력하지 않은 정보가 있습니다.' }
   }
+  if (!['Dom', 'Sub', 'Switch'].includes(input.role)) {
+    return { code: 'ROLE_INVALID', message: '성향을 선택해 주세요.' }
+  }
   if (!input.bio) {
     return {
       code: 'BIO_REQUIRED',

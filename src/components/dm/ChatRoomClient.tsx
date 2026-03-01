@@ -193,6 +193,40 @@ export function ChatRoomClient({ room, messages, currentUserId, otherNickname }:
               <ExpiryText expiresAt={room.request_expires_at} />
             </p>
           )}
+          {!showBlockConfirm && (
+            <p className="text-center mt-3">
+              <button
+                type="button"
+                onClick={() => setShowBlockConfirm(true)}
+                className="text-state-danger text-xs active:opacity-70"
+              >
+                요청 취소(차단)
+              </button>
+            </p>
+          )}
+          {showBlockConfirm && (
+            <div className="mt-3 pt-3 border-t border-surface-700/50">
+              <p className="text-text-primary text-sm mb-2">
+                요청을 취소하면 90P가 환불되지 않습니다. 진행하시겠습니까?
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowBlockConfirm(false)}
+                  className="flex-1 py-2 rounded-chip bg-surface-700 text-text-secondary text-xs"
+                >
+                  돌아가기
+                </button>
+                <button
+                  onClick={handleBlock}
+                  disabled={isPending}
+                  className="flex-1 py-2 rounded-chip bg-state-danger/80 text-white text-xs
+                             disabled:opacity-40"
+                >
+                  {isPending ? '처리 중...' : '취소(차단)'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -267,11 +301,11 @@ export function ChatRoomClient({ room, messages, currentUserId, otherNickname }:
         </div>
       )}
 
-      {/* 차단 확인 */}
-      {showBlockConfirm && (
+      {/* 차단 확인 (agreed 상태) */}
+      {showBlockConfirm && isAgreed && (
         <div className="px-4 py-3 border-t border-surface-700/60 bg-surface-750/50">
           <p className="text-text-primary text-sm mb-3">
-            {otherNickname}님을 차단하시겠습니까? 이 작업은 되돌릴 수 없습니다.
+            {otherNickname}님을 차단하시겠습니까? 이 작업은 되돌릴 수 없으며, 환불되지 않습니다.
           </p>
           <div className="flex gap-2">
             <button

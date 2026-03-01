@@ -7,11 +7,13 @@ import type { NextRequest } from 'next/server'
  *
  * 라우팅 규칙:
  * - 비인증 → /login 으로 이동
- * - 인증 + 프로필 없음 → /signup 으로 이동 (단, /signup, /auth/callback 제외)
+ * - 인증 + 프로필 없음 → /signup 으로 이동
  * - 인증 + 프로필 있음 + /login 접근 → /home 으로 이동
  */
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
+
+  const pathname = request.nextUrl.pathname
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -37,10 +39,8 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const pathname = request.nextUrl.pathname
-
-  // OAuth 콜백은 항상 통과
-  if (pathname.startsWith('/auth/callback')) {
+  // OAuth 콜백·매직 링크 확인은 항상 통과 (해시는 클라이언트에서만 처리)
+  if (pathname.startsWith('/auth/callback') || pathname.startsWith('/auth/confirm')) {
     return supabaseResponse
   }
 

@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import Link from 'next/link'
+import { EmailMagicLinkForm } from '@/components/auth/EmailMagicLinkForm'
 import { GoogleLoginButton } from '@/components/auth/GoogleLoginButton'
 import { TwitterLoginButton } from '@/components/auth/TwitterLoginButton'
 import { LegalModal } from '@/components/legal/LegalModal'
@@ -60,6 +61,16 @@ export default async function LoginPage({
         <div className="space-y-3">
           <GoogleLoginButton />
           <TwitterLoginButton />
+
+          <div className="relative my-6">
+            <span className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border-primary" />
+            </span>
+            <span className="relative flex justify-center text-xs">
+              <span className="bg-bg-primary px-2 text-text-muted">또는</span>
+            </span>
+          </div>
+          <EmailMagicLinkForm />
 
           <p className="text-center text-text-muted text-xs mt-6 leading-relaxed">
             원치 않는 요청은 언제든 거절하거나 차단할 수 있습니다

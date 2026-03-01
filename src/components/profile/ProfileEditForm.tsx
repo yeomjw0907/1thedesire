@@ -5,13 +5,19 @@ import { updateProfile } from '@/lib/actions/profile'
 import { REGIONS } from '@/lib/actions/signup'
 import type { ApiResponse, Profile } from '@/types'
 
-const ROLE_SUGGESTIONS = [
-  'Dom', 'Sub', 'Switch',
-  'Daddy/Mommy', 'Little',
-  'Sadist', 'Masochist',
-  'FWB', '감성 연애',
-  '대화 위주', '만남 위주',
-]
+const ROLE_OPTIONS = [
+  { value: 'Dom', label: 'Dom' },
+  { value: 'Sub', label: 'Sub' },
+  { value: 'Switch', label: 'Switch' },
+] as const
+
+function getRoleDefault(role: string | undefined): string {
+  if (!role) return 'Sub'
+  const r = role.trim()
+  if (r === 'Dom' || r === 'Sub' || r === 'Switch') return r
+  const first = r.split(/[,·\s·]+/)[0]?.trim()
+  return first === 'Dom' || first === 'Switch' ? first : 'Sub'
+}
 
 interface Props {
   profile: Pick<Profile, 'nickname' | 'gender' | 'age_group' | 'region' | 'role' | 'bio'>
@@ -67,20 +73,25 @@ export function ProfileEditForm({ profile }: Props) {
         </select>
       </FieldGroup>
 
-      {/* 성향 */}
-      <FieldGroup label="성향" hint="나를 설명하는 취향 한두 가지">
-        <input
-          type="text"
-          name="role"
-          defaultValue={profile.role}
-          placeholder="예: Sub · FWB, 감성 연애"
-          maxLength={50}
-          required
-          className="input-field"
-        />
-        <div className="flex flex-wrap gap-2 mt-3">
-          {ROLE_SUGGESTIONS.map((s) => (
-            <RoleSuggestionChip key={s} value={s} />
+      {/* 성향: Dom / Sub / Switch 중 1개 */}
+      <FieldGroup label="성향" hint="나의 역할">
+        <div className="flex gap-3">
+          {ROLE_OPTIONS.map((option) => (
+            <label key={option.value} className="flex-1 cursor-pointer">
+              <input
+                type="radio"
+                name="role"
+                value={option.value}
+                defaultChecked={profile.role === option.value || getRoleDefault(profile.role) === option.value}
+                required
+                className="sr-only peer"
+              />
+              <div className="text-center py-3 rounded-xl border border-surface-700 text-text-secondary
+                            peer-checked:border-desire-500 peer-checked:text-desire-400 peer-checked:bg-desire-500/10
+                            transition-all duration-150 cursor-pointer text-sm font-medium">
+                {option.label}
+              </div>
+            </label>
           ))}
         </div>
       </FieldGroup>
@@ -127,25 +138,3 @@ function FieldGroup({
   )
 }
 
-function RoleSuggestionChip({ value }: { value: string }) {
-  return (
-    <button
-      type="button"
-      onClick={(e) => {
-        const form = (e.target as HTMLButtonElement).closest('form')
-        const input = form?.querySelector<HTMLInputElement>('input[name="role"]')
-        if (input) {
-          const current = input.value
-          input.value = current
-            ? current.includes(value) ? current : `${current} · ${value}`
-            : value
-        }
-      }}
-      className="px-3 py-1.5 rounded-chip text-xs font-medium
-                 bg-surface-700 text-text-secondary
-                 active:bg-surface-750 transition-colors duration-100"
-    >
-      {value}
-    </button>
-  )
-}
