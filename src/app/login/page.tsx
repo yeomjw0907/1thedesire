@@ -1,20 +1,39 @@
+import fs from 'fs'
+import path from 'path'
+import Link from 'next/link'
 import { GoogleLoginButton } from '@/components/auth/GoogleLoginButton'
+import { LegalModal } from '@/components/legal/LegalModal'
 
 /**
  * 로그인 화면
  * 기준 문서: onboarding-signup-spec-v0.1.md §4-2, copy-library-v0.1.md §4
  */
-export default function LoginPage({
+export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; legal?: string }>
 }) {
+  const params = await searchParams
+  const legal = params.legal === 'privacy' || params.legal === 'terms' ? params.legal : null
+
+  let modalContent: string | null = null
+  let modalTitle = ''
+  if (legal === 'privacy') {
+    const filePath = path.join(process.cwd(), 'docs', 'legal', 'privacy-policy-v0.1.md')
+    modalContent = fs.readFileSync(filePath, 'utf-8')
+    modalTitle = '개인정보 처리방침'
+  } else if (legal === 'terms') {
+    const filePath = path.join(process.cwd(), 'docs', 'legal', 'terms-of-service-v0.1.md')
+    modalContent = fs.readFileSync(filePath, 'utf-8')
+    modalTitle = '이용약관'
+  }
+
   return (
     <main className="flex flex-col min-h-screen px-6 pt-20 pb-10">
       {/* 로고 영역 */}
       <div className="flex-1 flex flex-col justify-center">
         <div className="mb-16">
-          <p className="text-text-muted text-sm font-mono tracking-widest mb-3 uppercase">
+          <p className="text-text-muted text-sm font-serif tracking-widest mb-3 uppercase">
             Desire Ledger
           </p>
           <h1 className="text-text-strong font-serif text-4xl leading-tight mb-4">
@@ -46,12 +65,20 @@ export default function LoginPage({
         </div>
       </div>
 
-      {/* 하단 보조 텍스트 */}
-      <div className="text-center">
+      {/* 법률 문서 링크 (모달로 열림) */}
+      <div className="text-center mt-auto pt-8">
         <p className="text-text-muted text-xs">
-          가입 후에는 바로 분위기를 둘러볼 수 있습니다
+          <Link href="/login?legal=privacy" className="underline hover:text-text-secondary">
+            개인정보 처리방침
+          </Link>
+          {' · '}
+          <Link href="/login?legal=terms" className="underline hover:text-text-secondary">
+            이용약관
+          </Link>
         </p>
       </div>
+
+      {modalContent && <LegalModal title={modalTitle} content={modalContent} />}
     </main>
   )
 }

@@ -38,8 +38,8 @@ export default async function MyProfilePage() {
               {profile.age_group} · {profile.region} · {genderLabel(profile.gender)}
             </p>
           </div>
-          {/* 포인트 */}
-          <div className="flex flex-col items-end gap-1 mt-1">
+          {/* 포인트 + 수정 버튼 */}
+          <div className="flex flex-col items-end gap-2 mt-1">
             <span
               className="px-3 py-1 rounded-chip bg-surface-750 text-text-primary text-sm font-medium
                          border border-surface-700 tabular-nums"
@@ -47,6 +47,12 @@ export default async function MyProfilePage() {
             >
               {profile.points}P
             </span>
+            <Link
+              href="/profile/edit"
+              className="text-text-muted text-xs active:text-text-secondary transition-colors"
+            >
+              프로필 수정
+            </Link>
           </div>
         </div>
 

@@ -1,9 +1,10 @@
 import { redirect } from 'next/navigation'
 import { createServerClient } from '@/lib/supabase/server'
+import { ChargeSheet } from '@/components/points/ChargeSheet'
 import type { PointTransaction } from '@/types'
 
 /**
- * 포인트 내역 화면
+ * 포인트 내역 + 충전 화면
  * 기준 문서: wireframes-v0.1.md §6, point-monetization-ux-v0.1.md
  */
 export default async function PointsPage() {
@@ -26,7 +27,7 @@ export default async function PointsPage() {
     .limit(50)
 
   return (
-    <div className="flex flex-col min-h-full pb-8">
+    <div className="flex flex-col min-h-full pb-24">
       {/* 헤더 */}
       <header className="px-5 pt-6 pb-5 border-b border-surface-700/40">
         <h1 className="text-text-strong text-lg font-semibold tracking-tight mb-4">
@@ -44,9 +45,12 @@ export default async function PointsPage() {
             <span className="text-text-muted text-xl font-normal ml-1">P</span>
           </p>
           <p className="text-text-muted text-xs mt-3">
-            DM 요청 1회에 90P · 거절 시 45P 환불 · 미응답 시 전액 환불
+            DM 요청 1회 90P · 거절 시 45P 환불 · 미응답 시 전액 환불
           </p>
         </div>
+
+        {/* 충전 버튼 */}
+        <ChargeSheet />
       </header>
 
       {/* 내역 */}

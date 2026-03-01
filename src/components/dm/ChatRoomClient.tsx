@@ -4,6 +4,7 @@ import { useState, useTransition, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { acceptDmRequest, declineDmRequest, blockFromRoom } from '@/lib/actions/dm'
 import { sendMessage } from '@/lib/actions/messages'
+import { createClient } from '@/lib/supabase/client'
 import type { ChatRoomStatus } from '@/types'
 
 interface Message {
@@ -36,15 +37,43 @@ export function ChatRoomClient({ room, messages, currentUserId, otherNickname }:
   const [msgText, setMsgText] = useState('')
   const [localError, setLocalError] = useState<string | null>(null)
   const [showBlockConfirm, setShowBlockConfirm] = useState(false)
+  const [localMessages, setLocalMessages] = useState<Message[]>(messages)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   const isReceiver = room.receiver_id === currentUserId
   const isPending2 = room.status === 'pending'
   const isAgreed = room.status === 'agreed'
 
+  // 메시지 prop 동기화
+  useEffect(() => {
+    setLocalMessages(messages)
+  }, [messages])
+
+  // Supabase Realtime 구독
+  useEffect(() => {
+    if (!isAgreed) return
+    const supabase = createClient()
+    const channel = supabase
+      .channel(`room:${room.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages', filter: `room_id=eq.${room.id}` },
+        (payload) => {
+          const newMsg = payload.new as Message
+          // 본인이 보낸 메시지는 이미 optimistic update로 추가됐을 수 있으므로 중복 방지
+          setLocalMessages((prev) =>
+            prev.some((m) => m.id === newMsg.id) ? prev : [...prev, newMsg]
+          )
+        }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [room.id, isAgreed])
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [localMessages])
 
   function handleAccept() {
     startTransition(async () => {
@@ -83,12 +112,27 @@ export function ChatRoomClient({ room, messages, currentUserId, otherNickname }:
     const text = msgText.trim()
     if (!text) return
     setLocalError(null)
+    // Optimistic update
+    const tempId = `temp-${Date.now()}`
+    const tempMsg: Message = {
+      id: tempId,
+      sender_id: currentUserId,
+      content: text,
+      message_type: 'text',
+      message_status: 'active',
+      created_at: new Date().toISOString(),
+    }
+    setLocalMessages((prev) => [...prev, tempMsg])
+    setMsgText('')
     startTransition(async () => {
       const result = await sendMessage(room.id, text)
       if (result.success) {
-        setMsgText('')
-        router.refresh()
+        // Realtime으로 실제 메시지가 도착하면 tempId 제거
+        setLocalMessages((prev) => prev.filter((m) => m.id !== tempId))
       } else {
+        // 실패 시 optimistic 메시지 제거 + 에러 표시
+        setLocalMessages((prev) => prev.filter((m) => m.id !== tempId))
+        setMsgText(text)
         setLocalError(result.error?.message ?? '전송에 실패했습니다')
       }
     })
@@ -163,12 +207,12 @@ export function ChatRoomClient({ room, messages, currentUserId, otherNickname }:
 
       {/* 메시지 목록 */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-        {messages.length === 0 && isAgreed && (
+        {localMessages.length === 0 && isAgreed && (
           <p className="text-center text-text-muted text-sm py-8">
             대화를 시작해보세요
           </p>
         )}
-        {messages.map((msg) => {
+        {localMessages.map((msg) => {
           if (msg.message_type === 'system') {
             return (
               <div key={msg.id} className="flex justify-center">
