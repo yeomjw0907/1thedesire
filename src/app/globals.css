@@ -88,4 +88,15 @@
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     background: #3a3a42;
   }
+
+  /* 토스트 상태별 스타일 */
+  .toast-error [data-icon] {
+    color: #C44444;
+  }
+  .toast-success [data-icon] {
+    color: #2F9A72;
+  }
+  .toast-info [data-icon] {
+    color: #4E7BB7;
+  }
 }

@@ -4,21 +4,11 @@ import { redirect } from 'next/navigation'
 import { createServerClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { SignupInput, ApiResponse, SignupResult } from '@/types'
+import { REGIONS, AGES } from '@/lib/constants/signup'
 
 // 포인트 정책 상수 (문서 고정값 - 임의 변경 금지)
 // 기준: key-decisions-summary-v0.1.md, state-based-functional-spec-v0.1.md
 const FEMALE_SIGNUP_BONUS = 270
-
-// 지역 목록
-export const REGIONS = [
-  '서울', '경기', '인천', '부산', '대구', '광주', '대전', '울산', '세종',
-  '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주', '해외',
-] as const
-
-// 연령대 목록
-export const AGE_GROUPS = [
-  '20대 초반', '20대 후반', '30대 초반', '30대 후반', '40대 이상',
-] as const
 
 /**
  * completeSignup
@@ -127,7 +117,7 @@ function validateSignupInput(input: SignupInput): { code: string; message: strin
   if (input.nickname.length < 2 || input.nickname.length > 20) {
     return { code: 'NICKNAME_LENGTH', message: '닉네임은 2자 이상 20자 이하로 입력해 주세요.' }
   }
-  if (!['male', 'female', 'other'].includes(input.gender)) {
+  if (!['male', 'female'].includes(input.gender)) {
     return { code: 'GENDER_REQUIRED', message: '아직 입력하지 않은 정보가 있습니다.' }
   }
   if (!input.age_group) {

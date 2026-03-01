@@ -39,8 +39,8 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // OAuth 콜백·이메일 확인 페이지는 항상 통과
-  if (pathname.startsWith('/auth/callback') || pathname.startsWith('/auth/confirm')) {
+  // OAuth 콜백은 항상 통과
+  if (pathname.startsWith('/auth/callback')) {
     return supabaseResponse
   }
 
@@ -62,6 +62,11 @@ export async function middleware(request: NextRequest) {
 
   // /signup, /signup/complete 는 프로필 없는 상태에서 접근 허용
   if (pathname.startsWith('/signup')) {
+    return supabaseResponse
+  }
+
+  // /admin 은 자체 인증·권한 로직이 있으므로 프로필 체크 생략
+  if (pathname.startsWith('/admin')) {
     return supabaseResponse
   }
 

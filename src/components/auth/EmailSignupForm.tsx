@@ -24,7 +24,9 @@ export function EmailSignupForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [emailSent, setEmailSent] = useState(false)
+  const [otpSent, setOtpSent] = useState(false)
+  const [otpCode, setOtpCode] = useState('')
+  const [verifyLoading, setVerifyLoading] = useState(false)
   const [resendCooldown, setResendCooldown] = useState(0)
   const [resending, setResending] = useState(false)
 
@@ -55,7 +57,6 @@ export function EmailSignupForm() {
     const { data, error: err } = await supabase.auth.signUp({
       email: eTrim,
       password,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     })
 
     setLoading(false)
@@ -77,9 +78,42 @@ export function EmailSignupForm() {
     if (data.session) {
       router.push('/signup')
     } else {
-      setEmailSent(true)
+      setOtpSent(true)
       setResendCooldown(60)
     }
+  }
+
+  async function handleVerifyOtp(e: React.FormEvent) {
+    e.preventDefault()
+    const code = otpCode.trim().replace(/\s/g, '')
+    if (!code) {
+      toast.error('인증번호를 입력해 주세요.')
+      return
+    }
+    setVerifyLoading(true)
+
+    const supabase = createClient()
+    const { data, error: err } = await supabase.auth.verifyOtp({
+      email: email.trim(),
+      token: code,
+      type: 'signup',
+    })
+
+    setVerifyLoading(false)
+    if (err) {
+      toast.error(
+        err.message === 'Token has expired' || err.message?.includes('expired')
+          ? '인증번호가 만료되었습니다. 다시 받아 주세요.'
+          : '인증번호가 올바르지 않습니다.'
+      )
+      return
+    }
+    if (!data.user) {
+      toast.error('인증에 실패했습니다.')
+      return
+    }
+
+    router.push('/signup')
   }
 
   useEffect(() => {
@@ -96,7 +130,6 @@ export function EmailSignupForm() {
     const { error: err } = await supabase.auth.resend({
       type: 'signup',
       email: email.trim(),
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     })
 
     setResending(false)
@@ -104,42 +137,67 @@ export function EmailSignupForm() {
       toast.error(err.message ?? '재발송에 실패했습니다.')
       return
     }
-    toast.success('인증 메일을 다시 보냈습니다.')
+    toast.success('인증번호를 다시 보냈습니다.')
     setResendCooldown(60)
   }, [email, resendCooldown, resending])
 
-  if (emailSent) {
+  if (otpSent) {
     return (
-      <div className="space-y-3 text-center">
-        <div className="p-4 bg-trust-500/10 border border-trust-500/30 rounded-xl">
-          <p className="text-trust-400 text-sm font-medium mb-1">인증 메일을 보냈습니다</p>
+      <div className="space-y-3">
+        <div className="p-4 bg-trust-500/10 border border-trust-500/30 rounded-xl text-center">
+          <p className="text-trust-400 text-sm font-medium mb-1">인증번호를 보냈습니다</p>
           <p className="text-text-secondary text-xs leading-relaxed">
             <span className="text-text-primary font-medium">{email}</span> 으로 발송된
-            인증 링크를 클릭하면 가입이 완료됩니다.
+            6자리 인증번호를 입력해 주세요.
           </p>
           <p className="text-text-muted text-xs mt-2">
             메일이 안 보이면 스팸함도 확인해 주세요.
           </p>
         </div>
-        <button
-          type="button"
-          disabled={resendCooldown > 0 || resending}
-          onClick={handleResend}
-          className="text-trust-400 text-xs font-medium hover:text-trust-300 disabled:text-text-muted disabled:cursor-not-allowed transition-colors"
-        >
-          {resending
-            ? '발송 중...'
-            : resendCooldown > 0
-              ? `다시 보내기 (${resendCooldown}초)`
-              : '인증 메일 다시 보내기'}
-        </button>
-        <button
-          type="button"
-          onClick={() => { setEmailSent(false); setEmail(''); setPassword('') }}
-          className="text-text-muted text-xs underline hover:text-text-secondary"
-        >
-          다른 이메일로 가입하기
-        </button>
+        <form onSubmit={handleVerifyOtp} className="space-y-3">
+          <input
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            value={otpCode}
+            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+            placeholder="000000"
+            disabled={verifyLoading}
+            className="input-field w-full py-4 rounded-chip text-center text-lg tracking-[0.4em] font-medium
+                       placeholder:text-text-muted/60
+                       focus:ring-2 focus:ring-desire-500/30
+                       disabled:opacity-50"
+          />
+          <button
+            type="submit"
+            disabled={verifyLoading || otpCode.trim().length < 6}
+            className="btn-primary w-full"
+          >
+            {verifyLoading ? '확인 중...' : '인증하기'}
+          </button>
+        </form>
+        <div className="flex flex-col items-center gap-2">
+          <button
+            type="button"
+            disabled={resendCooldown > 0 || resending}
+            onClick={handleResend}
+            className="text-trust-400 text-xs font-medium hover:text-trust-300 disabled:text-text-muted disabled:cursor-not-allowed transition-colors"
+          >
+            {resending
+              ? '발송 중...'
+              : resendCooldown > 0
+                ? `다시 보내기 (${resendCooldown}초)`
+                : '인증번호 다시 보내기'}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setOtpSent(false); setOtpCode(''); setEmail(''); setPassword('') }}
+            className="text-text-muted text-xs underline hover:text-text-secondary"
+          >
+            다른 이메일로 가입하기
+          </button>
+        </div>
       </div>
     )
   }

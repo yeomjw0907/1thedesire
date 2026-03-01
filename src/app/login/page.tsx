@@ -1,7 +1,6 @@
 import fs from 'fs'
 import path from 'path'
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
 import { EmailLoginBlock } from '@/components/auth/EmailLoginBlock'
 import { GoogleLoginButton } from '@/components/auth/GoogleLoginButton'
 import { SignupSection } from '@/components/auth/SignupSection'
@@ -11,20 +10,13 @@ import { LegalModal } from '@/components/legal/LegalModal'
 /**
  * 로그인 화면
  * 기준 문서: onboarding-signup-spec-v0.1.md §4-2, copy-library-v0.1.md §4
- *
- * 이메일 인증 등 /login?code=... 로 오면 /auth/callback 으로 넘겨 세션 처리
  */
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; legal?: string; code?: string }>
+  searchParams: Promise<{ error?: string; legal?: string }>
 }) {
   const params = await searchParams
-
-  // 이메일 인증 등으로 code가 붙어 오면 콜백에서 세션 교환 후 리다이렉트
-  if (params.code) {
-    redirect(`/auth/callback?code=${encodeURIComponent(params.code)}`)
-  }
 
   const legal = params.legal === 'privacy' || params.legal === 'terms' ? params.legal : null
 

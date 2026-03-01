@@ -38,12 +38,21 @@ export default function RootLayout({
         </div>
         <Toaster
           position="top-center"
+          gap={8}
           toastOptions={{
             style: {
-              background: '#1C1C20',
-              border: '1px solid rgba(255,255,255,0.08)',
-              color: '#E8E8EC',
+              background: '#1D1D22',
+              border: '1px solid rgba(255,255,255,0.06)',
+              color: '#DDD6CF',
               fontSize: '14px',
+              borderRadius: '14px',
+              padding: '14px 18px',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            },
+            classNames: {
+              error: 'toast-error',
+              success: 'toast-success',
+              info: 'toast-info',
             },
           }}
         />

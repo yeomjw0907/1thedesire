@@ -42,7 +42,7 @@ export default async function SignupPage() {
         <div className="mb-8">
           <p className="text-text-muted text-sm mb-2">프로필 설정</p>
           <h1 className="text-text-strong text-2xl font-semibold leading-snug">
-            이 공간에서의<br />분위기를 알려주세요
+            당신의<br />분위기를 알려주세요
           </h1>
           <p className="text-text-secondary text-sm mt-3 leading-relaxed">
             기본 정보를 입력하고 내 분위기를 소개해보세요.<br />
