@@ -64,12 +64,6 @@ export function EmailPasswordForm() {
       return
     }
 
-    const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '').split(',').map(e => e.trim())
-    if (adminEmails.includes(eTrim)) {
-      router.push('/admin')
-      return
-    }
-
     const { data: profile } = await supabase
       .from('profiles')
       .select('id')

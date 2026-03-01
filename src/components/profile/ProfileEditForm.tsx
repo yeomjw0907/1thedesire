@@ -2,7 +2,7 @@
 
 import { useActionState } from 'react'
 import { updateProfile } from '@/lib/actions/profile'
-import { REGIONS } from '@/lib/actions/signup'
+import { REGIONS } from '@/lib/constants/signup'
 import type { ApiResponse, Profile } from '@/types'
 
 const ROLE_OPTIONS = [
@@ -137,4 +137,3 @@ function FieldGroup({
     </div>
   )
 }
-

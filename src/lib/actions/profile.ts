@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { createServerClient } from '@/lib/supabase/server'
-import { REGIONS } from '@/lib/actions/signup'
+import { REGIONS } from '@/lib/constants/signup'
 import type { ApiResponse } from '@/types'
 
 export async function updateProfile(

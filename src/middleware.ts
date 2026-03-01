@@ -53,10 +53,16 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // 인증된 사용자가 /login 또는 /join 에 접근하면 홈 또는 프로필 가입으로
+  // 인증된 사용자가 /login 또는 /join 에 접근하면 프로필 유무에 따라 분기
   if (pathname === '/login' || pathname === '/join') {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', user.id)
+      .maybeSingle()
+
     const url = request.nextUrl.clone()
-    url.pathname = '/home'
+    url.pathname = profile ? '/home' : '/signup'
     return NextResponse.redirect(url)
   }
 
