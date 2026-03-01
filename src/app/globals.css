@@ -68,4 +68,24 @@
   .progress-bar-fill {
     @apply h-full bg-desire-500 transition-all duration-300;
   }
+
+  /* 이메일 도메인 목록 등 세로 스크롤 영역용 스크롤바 */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #25252c #1d1d22;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: #1d1d22;
+    border-radius: 999px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: #25252c;
+    border-radius: 999px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: #3a3a42;
+  }
 }

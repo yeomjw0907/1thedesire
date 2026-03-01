@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createServerClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -21,8 +22,17 @@ export default async function AdminPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  // RBAC: DB is_admin 우선, 폴백으로 ADMIN_EMAILS 환경변수
+  const { data: myProfile } = await supabase
+    .from('profiles')
+    .select('is_admin')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  const isDbAdmin = myProfile?.is_admin === true
   const adminEmails = (process.env.ADMIN_EMAILS ?? '').split(',').map((e) => e.trim())
-  if (!adminEmails.includes(user.email ?? '')) redirect('/home')
+  const isEnvAdmin = adminEmails.includes(user.email ?? '')
+  if (!isDbAdmin && !isEnvAdmin) redirect('/home')
 
   const { section } = await searchParams
   const activeSection = section ?? 'reports'
@@ -88,6 +98,21 @@ export default async function AdminPage({
         ))}
       </div>
 
+      {/* STI 검수 진입 */}
+      <Link
+        href="/admin/sti"
+        className="flex items-center justify-between px-4 py-3 mb-4
+                   bg-surface-800 rounded-card border border-surface-700/40
+                   active:bg-surface-750 transition-colors"
+      >
+        <span className="text-text-secondary text-sm font-medium">최근검사 확인 검수</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          className="text-text-muted">
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      </Link>
+
       {/* 섹션 탭 */}
       <div className="flex gap-1 mb-5 border-b border-surface-700/40 pb-3">
         {[
@@ -95,7 +120,7 @@ export default async function AdminPage({
           { key: 'users', label: '유저' },
           { key: 'posts', label: '게시글' },
         ].map(({ key, label }) => (
-          <a
+          <Link
             key={key}
             href={`/admin?section=${key}`}
             className={`px-4 py-1.5 rounded-chip text-sm font-medium transition-colors
@@ -104,7 +129,7 @@ export default async function AdminPage({
                          : 'text-text-muted'}`}
           >
             {label}
-          </a>
+          </Link>
         ))}
       </div>
 

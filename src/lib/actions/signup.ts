@@ -75,54 +75,31 @@ export async function completeSignup(
 
   const admin = createAdminClient()
 
-  // 3. 프로필 중복 확인 (이미 가입한 경우)
-  const { data: existingProfile } = await admin
-    .from('profiles')
-    .select('id')
-    .eq('id', user.id)
-    .maybeSingle()
+  const autoPostContent = generateAutoPost(input)
 
-  if (existingProfile) {
-    // 이미 가입 완료된 사용자 → 홈으로 이동
-    redirect('/home')
-  }
-
-  // 4. 닉네임 중복 확인
-  const { data: existingNickname } = await admin
-    .from('profiles')
-    .select('id')
-    .eq('nickname', input.nickname)
-    .maybeSingle()
-
-  if (existingNickname) {
-    return {
-      success: false,
-      data: null,
-      error: { code: 'NICKNAME_TAKEN', message: '이미 사용 중인 이름입니다. 다른 이름으로 조정해 주세요.' },
-    }
-  }
-
-  const isFemale = input.gender === 'female'
-  const initialPoints = isFemale ? FEMALE_SIGNUP_BONUS : 0
-
-  // 5. 프로필 생성
-  const { error: profileError } = await admin.from('profiles').insert({
-    id: user.id,
-    nickname: input.nickname,
-    gender: input.gender,
-    age_group: input.age_group,
-    region: input.region,
-    role: input.role,
-    bio: input.bio,
-    points: initialPoints,
-    gender_benefit_type: isFemale ? 'female_starter' : 'standard',
-    is_adult_checked: true,
-    adult_checked_at: new Date().toISOString(),
-    account_status: 'active',
+  // RPC: 프로필 생성 + 포인트 지급 + 자동 게시글을 하나의 트랜잭션으로
+  const { data: result, error: rpcErr } = await admin.rpc('complete_signup_atomic', {
+    p_user_id: user.id,
+    p_nickname: input.nickname,
+    p_gender: input.gender,
+    p_age_group: input.age_group,
+    p_region: input.region,
+    p_role: input.role,
+    p_bio: input.bio,
+    p_auto_post_content: autoPostContent,
   })
 
-  if (profileError) {
-    console.error('[completeSignup] 프로필 생성 실패:', profileError)
+  if (rpcErr) {
+    const msg = rpcErr.message ?? ''
+    if (msg.includes('ALREADY_EXISTS')) redirect('/home')
+    if (msg.includes('NICKNAME_TAKEN')) {
+      return {
+        success: false,
+        data: null,
+        error: { code: 'NICKNAME_TAKEN', message: '이미 사용 중인 이름입니다. 다른 이름으로 조정해 주세요.' },
+      }
+    }
+    console.error('[completeSignup] RPC 실패:', rpcErr)
     return {
       success: false,
       data: null,
@@ -130,48 +107,9 @@ export async function completeSignup(
     }
   }
 
-  // 6. 여성 가입 보너스 포인트 거래 기록
-  // 중복 지급 방지: 프로필 생성 이후에만 실행
-  if (isFemale) {
-    const { error: pointError } = await admin.from('point_transactions').insert({
-      user_id: user.id,
-      type: 'signup_bonus',
-      amount: FEMALE_SIGNUP_BONUS,
-      balance_after: FEMALE_SIGNUP_BONUS,
-      reference_type: 'profile',
-      reference_id: user.id,
-      description: '여성 가입 보너스',
-      policy_code: 'signup_bonus_female',
-    })
+  const isFemale = result?.is_female ?? false
+  const initialPoints = result?.initial_points ?? 0
 
-    if (pointError) {
-      // 포인트 기록 실패 시 로그만 남기고 계속 진행
-      // (프로필이 이미 생성되었으므로 롤백 불가, 운영자 수동 처리 필요)
-      console.error('[completeSignup] 여성 보너스 포인트 기록 실패:', pointError)
-    }
-  }
-
-  // 7. 자동 소개글 생성
-  // 기준: state-based-functional-spec-v0.1.md §3, api-contracts-v0.1.md §4
-  const autoPostContent = generateAutoPost(input)
-
-  const { data: autoPost, error: postError } = await admin
-    .from('posts')
-    .insert({
-      user_id: user.id,
-      content: autoPostContent,
-      is_auto_generated: true,
-      status: 'published',
-    })
-    .select('id')
-    .maybeSingle()
-
-  if (postError) {
-    // 자동 소개글 생성 실패는 가입 실패가 아님 (비필수)
-    console.error('[completeSignup] 자동 소개글 생성 실패:', postError)
-  }
-
-  // 8. 완료 리디렉션 (쿼리 파라미터로 완료 화면에 컨텍스트 전달)
   const params = new URLSearchParams({
     female: isFemale ? '1' : '0',
     points: String(initialPoints),

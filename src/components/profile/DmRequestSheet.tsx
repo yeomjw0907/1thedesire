@@ -11,9 +11,13 @@ interface Props {
   targetUserId: string
   targetProfile: Pick<Profile, 'nickname' | 'age_group' | 'region' | 'role' | 'gender'>
   myPoints: number
+  /** 상대의 DM 응답률 (0~100). 데이터 없으면 null */
+  responseRate?: number | null
+  /** 상대의 마지막 활동 시각(ISO 문자열) */
+  lastActiveAt?: string | null
 }
 
-export function DmRequestSheet({ targetUserId, targetProfile, myPoints }: Props) {
+export function DmRequestSheet({ targetUserId, targetProfile, myPoints, responseRate, lastActiveAt }: Props) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -76,6 +80,24 @@ export function DmRequestSheet({ targetUserId, targetProfile, myPoints }: Props)
               )}
             </div>
 
+            {/* 상대 활동 신뢰 지표 */}
+            {(responseRate != null || lastActiveAt) && (
+              <div className="flex gap-2 mb-4">
+                {responseRate != null && (
+                  <div className="flex-1 bg-surface-750 rounded-xl px-3 py-2 border border-surface-700/50 text-center">
+                    <p className="text-trust-400 text-sm font-semibold">{responseRate}%</p>
+                    <p className="text-text-muted text-[11px]">응답률</p>
+                  </div>
+                )}
+                {lastActiveAt && (
+                  <div className="flex-1 bg-surface-750 rounded-xl px-3 py-2 border border-surface-700/50 text-center">
+                    <p className="text-text-secondary text-sm font-medium">{formatLastActive(lastActiveAt)}</p>
+                    <p className="text-text-muted text-[11px]">최근 활동</p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* 정책 패널 */}
             <div className="bg-surface-750 rounded-2xl px-4 py-3 mb-5
                             border border-surface-700/50 space-y-2.5">
@@ -84,6 +106,7 @@ export function DmRequestSheet({ targetUserId, targetProfile, myPoints }: Props)
               <PolicyRow label="24시간 내 응답이 없으면 전액 환불됩니다" variant="refund" />
               <PolicyRow label="수락 후 대화는 무료입니다" variant="free" />
               <PolicyRow label="차단 또는 요청 취소 시에는 환불되지 않습니다" variant="debit" />
+              <PolicyRow label="원치 않는 요청은 거절·차단할 수 있으며, 프로필에서 신고할 수 있습니다" variant="free" />
             </div>
 
             {!hasPoints && (
@@ -142,6 +165,18 @@ export function DmRequestSheet({ targetUserId, targetProfile, myPoints }: Props)
       )}
     </>
   )
+}
+
+function formatLastActive(isoString: string): string {
+  const diff = Date.now() - new Date(isoString).getTime()
+  const mins = Math.floor(diff / 60_000)
+  if (mins < 1) return '방금 전'
+  if (mins < 60) return `${mins}분 전`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}시간 전`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days}일 전`
+  return '7일 이상 전'
 }
 
 function PolicyRow({ label, variant }: { label: string; variant: 'debit' | 'refund' | 'free' }) {

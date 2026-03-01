@@ -21,7 +21,12 @@ Supabase 대시보드와 외부 서비스(Google, X)에서 **직접 설정해야
 | 항목 | 할 일 |
 |------|--------|
 | **Email** | 토글 **Enable** 로 켜기 |
-| 설명 | 이메일로 “로그인 링크 받기” 할 때 사용. 추가 입력 없이 켜기만 하면 됨. |
+| 설명 | 이메일 로그인·회원가입 모두 사용. (이메일+비밀번호 로그인, 이메일+비밀번호 가입, 인증번호/매직 링크) |
+
+**이메일 회원가입 후 바로 프로필 입력(/signup)으로 넘어가게 하려면**
+
+- **Authentication** → **Providers** → **Email** 에서 **Confirm email** 을 **끄기(Disable)** 해 두세요.
+- Confirm email이 켜져 있으면 가입 후 메일 인증을 해야 로그인·프로필 입력이 가능합니다.
 
 ### 2-2. Google 켜기
 
@@ -33,6 +38,15 @@ Supabase 대시보드와 외부 서비스(Google, X)에서 **직접 설정해야
 | **Save** | 저장 버튼 클릭 |
 
 → Client ID / Secret 발급 방법은 아래 **4. Google Cloud Console** 참고.
+
+### 2-2-2. 이메일 인증번호(OTP) — 필수
+
+앱은 **인증번호(OTP)만** 사용합니다. 매직 링크는 사용하지 않습니다.
+
+**경로**: Authentication → **Email Templates** → **Magic Link** (또는 해당 이메일 템플릿)
+
+- 본문에 **`{{ .Token }}`** 변수를 넣어 6자리 인증번호가 보이게 하세요.
+- 예: `이메일로 받은 인증번호: {{ .Token }}`
 
 ### 2-3. X (Twitter) 켜기
 
@@ -85,7 +99,7 @@ https://1thedesire.com/auth/confirm
 ```
 
 - `auth/callback` → Google / X 로그인 후 돌아오는 주소
-- `auth/confirm` → 이메일 매직 링크 클릭 후 돌아오는 주소
+- `auth/confirm` → (선택) 예전 이메일 링크가 있을 수 있어 넣어 둔 주소. 앱은 **인증번호(OTP)만** 사용함.
 
 추가 후 **Save** 클릭.
 

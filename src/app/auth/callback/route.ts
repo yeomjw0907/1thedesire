@@ -2,6 +2,19 @@ import { createServerClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+/** OAuth 콜백 후 리다이렉트 허용 경로 (오픈 리다이렉트 방지) */
+const ALLOWED_NEXT_PATHS = ['/home', '/profile', '/dm', '/points', '/search', '/signup'] as const
+
+function getAllowedNext(raw: string | null): string {
+  if (!raw || typeof raw !== 'string') return '/home'
+  const path = raw.startsWith('/') ? raw : `/${raw}`
+  const normalized = path.replace(/\/+/g, '/').replace(/\/$/, '') || '/home'
+  if ((ALLOWED_NEXT_PATHS as readonly string[]).includes(normalized)) {
+    return normalized
+  }
+  return '/home'
+}
+
 /**
  * OAuth 콜백 핸들러
  * Google OAuth 완료 후 Supabase가 이 경로로 리디렉션
@@ -10,12 +23,12 @@ import type { NextRequest } from 'next/server'
  * 1. code를 세션으로 교환
  * 2. 프로필 존재 여부 확인
  *    - 신규 사용자 → /signup (가입 폼)
- *    - 기존 사용자 → /home
+ *    - 기존 사용자 → /home 또는 허용된 next 경로
  */
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/home'
+  const next = getAllowedNext(searchParams.get('next'))
 
   if (!code) {
     return NextResponse.redirect(`${origin}/login?error=no_code`)
@@ -38,10 +51,8 @@ export async function GET(request: NextRequest) {
     .maybeSingle()
 
   if (!profile) {
-    // 신규 사용자 → 가입 폼
     return NextResponse.redirect(`${origin}/signup`)
   }
 
-  // 기존 사용자 → 홈 또는 요청한 경로
   return NextResponse.redirect(`${origin}${next}`)
 }

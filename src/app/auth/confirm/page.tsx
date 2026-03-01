@@ -5,8 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
 /**
- * 매직 링크 클릭 후 리다이렉트 대상
- * URL 해시(#access_token=...&refresh_token=...)를 파싱해 세션 설정 후 /signup 또는 /home 으로 이동
+ * (레거시) 이메일 링크 클릭 시 리다이렉트될 수 있는 페이지. 인증번호(OTP)만 사용하는 경우에도 링크가 포함된 메일이 오면 여기로 올 수 있음.
  */
 export default function AuthConfirmPage() {
   const router = useRouter()

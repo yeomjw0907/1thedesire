@@ -1,10 +1,17 @@
 import type { Metadata, Viewport } from 'next'
+import { Toaster } from 'sonner'
 import './globals.css'
 
 export const metadata: Metadata = {
   title: '욕망백서',
-  description: '분위기를 먼저 보고, 대화는 그 다음에',
+  description: '분위기를 먼저 보고, 대화는 그 다음에. 취향을 안전하게 나누는 익명 플랫폼.',
   manifest: '/manifest.json',
+  openGraph: {
+    title: '욕망백서',
+    description: '분위기를 먼저 보고, 대화는 그 다음에.',
+    locale: 'ko_KR',
+  },
+  robots: { index: true, follow: true },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -15,8 +22,6 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   themeColor: '#0B0B0D',
 }
 
@@ -31,6 +36,17 @@ export default function RootLayout({
         <div className="mx-auto max-w-md min-h-screen relative">
           {children}
         </div>
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            style: {
+              background: '#1C1C20',
+              border: '1px solid rgba(255,255,255,0.08)',
+              color: '#E8E8EC',
+              fontSize: '14px',
+            },
+          }}
+        />
       </body>
     </html>
   )

@@ -39,22 +39,22 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // OAuth 콜백·매직 링크 확인은 항상 통과 (해시는 클라이언트에서만 처리)
+  // OAuth 콜백·이메일 확인 페이지는 항상 통과
   if (pathname.startsWith('/auth/callback') || pathname.startsWith('/auth/confirm')) {
     return supabaseResponse
   }
 
   // 비인증 사용자
   if (!user) {
-    if (pathname === '/login') return supabaseResponse
+    if (pathname === '/login' || pathname === '/join') return supabaseResponse
 
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  // 인증된 사용자가 /login 에 접근하면 홈으로
-  if (pathname === '/login') {
+  // 인증된 사용자가 /login 또는 /join 에 접근하면 홈 또는 프로필 가입으로
+  if (pathname === '/login' || pathname === '/join') {
     const url = request.nextUrl.clone()
     url.pathname = '/home'
     return NextResponse.redirect(url)

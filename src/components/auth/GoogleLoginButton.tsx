@@ -27,7 +27,12 @@ export function GoogleLoginButton() {
     <button
       onClick={handleGoogleLogin}
       disabled={loading}
-      className="btn-primary flex items-center justify-center gap-3"
+      className="w-full flex items-center justify-center gap-3 py-4 rounded-chip
+                 bg-white text-[#1f1f1f] font-medium
+                 border border-[#dadce0]
+                 hover:bg-[#f8f9fa] active:bg-[#f1f3f4]
+                 disabled:opacity-50 disabled:cursor-not-allowed
+                 transition-colors duration-150"
     >
       {loading ? (
         <span className="text-base">잠시만요...</span>

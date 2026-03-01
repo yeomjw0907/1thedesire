@@ -4,6 +4,8 @@ import { createServerClient } from '@/lib/supabase/server'
 import { DmRequestSheet } from '@/components/profile/DmRequestSheet'
 import { ReportSheet } from '@/components/profile/ReportSheet'
 import { BlockSheet } from '@/components/profile/BlockSheet'
+import { StiVerificationBadge } from '@/components/sti/StiVerificationBadge'
+import type { PublicStiBadge } from '@/types/sti'
 
 export default async function ProfileDetailPage({
   params,
@@ -53,6 +55,15 @@ export default async function ProfileDetailPage({
     myPoints = myProfile?.points ?? 0
   }
 
+  // 공개 STI 배지 조회 (verified + is_public + not expired 조건)
+  const { data: stiBadgeRow } = await supabase
+    .from('public_sti_badges')
+    .select('user_id, test_date, expires_at, verified_at')
+    .eq('user_id', id)
+    .maybeSingle()
+
+  const publicStiBadge = stiBadgeRow as PublicStiBadge | null
+
   return (
     <div className="flex flex-col min-h-full pb-36">
       {/* 상단 바 */}
@@ -97,6 +108,13 @@ export default async function ProfileDetailPage({
         )}
       </section>
 
+      {/* STI 배지 (공개 조건 충족 시) */}
+      {publicStiBadge && (
+        <section className="px-6 py-3 border-b border-surface-700/40">
+          <StiVerificationBadge badge={publicStiBadge} />
+        </section>
+      )}
+
       {/* 상태 라인 */}
       <section className="px-6 py-4 border-b border-surface-700/40">
         <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
@@ -134,8 +152,8 @@ export default async function ProfileDetailPage({
           </h2>
           <div className="space-y-3">
             {posts.map((post) => {
-              const postTags = post.tags
-                ? post.tags.split(/[,·\s·]+/).map((t) => t.trim()).filter(Boolean)
+              const postTags: string[] = post.tags
+                ? (post.tags as string).split(/[,·\s·]+/).map((t: string) => t.trim()).filter(Boolean)
                 : []
               return (
                 <div key={post.id} className="card">
@@ -149,7 +167,7 @@ export default async function ProfileDetailPage({
                   )}
                   {postTags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-2">
-                      {postTags.map((tag) => (
+                      {postTags.map((tag: string) => (
                         <span
                           key={tag}
                           className="px-2 py-0.5 rounded-chip text-[11px]
