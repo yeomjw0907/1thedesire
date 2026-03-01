@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { blockUser } from '@/lib/actions/social'
 
@@ -37,7 +38,7 @@ export function BlockSheet({ targetUserId, targetNickname, isBlocked }: Props) {
         {isBlocked ? '차단됨' : '차단'}
       </button>
 
-      {open && (
+      {open && createPortal(
         <div className="fixed inset-0 z-50 flex flex-col justify-end">
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"
@@ -74,7 +75,8 @@ export function BlockSheet({ targetUserId, targetNickname, isBlocked }: Props) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )

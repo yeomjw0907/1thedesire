@@ -9,10 +9,25 @@ export type GenderBenefitType = 'standard' | 'female_starter'
 
 export type PostStatus = 'draft' | 'published' | 'hidden' | 'deleted'
 
+/**
+ * DM 채팅방 상태.
+ * @deprecated 'declined' — DM 거절 기능 제거됨 (home-centered-ia-v0.1.md §5-2).
+ *   새 코드에서 절대 생성·분기 금지. 과거 DB 레코드 렌더링 방어 목적으로만 타입 유지.
+ */
 export type ChatRoomStatus = 'pending' | 'agreed' | 'declined' | 'expired' | 'blocked' | 'closed'
 
+/**
+ * 포인트 환불 정책 코드.
+ * @deprecated 'decline_half_refund' — DM 거절 기능 제거로 더 이상 발생하지 않음.
+ *   과거 point_transactions 레코드 호환 목적으로만 타입 유지.
+ */
 export type RefundPolicy = 'decline_half_refund' | 'expire_full_refund' | 'blocked_no_refund'
 
+/**
+ * 동의 이벤트 타입.
+ * @deprecated 'agreement_declined' — DM 거절 기능 제거로 더 이상 발생하지 않음.
+ *   새 코드에서 절대 생성 금지. 과거 consent_events 레코드 호환 목적으로만 타입 유지.
+ */
 export type ConsentEventType =
   | 'request_created'
   | 'request_viewed'
@@ -25,6 +40,11 @@ export type MessageStatus = 'active' | 'deleted' | 'flagged'
 
 export type PointTransactionType = 'signup_bonus' | 'charge' | 'debit' | 'refund' | 'manual_adjustment'
 
+/**
+ * 포인트 정책 코드.
+ * @deprecated 'dm_decline_refund_half' — DM 거절 기능 제거로 더 이상 발생하지 않음.
+ *   새 코드에서 절대 생성 금지. 과거 point_transactions 레코드 호환 목적으로만 타입 유지.
+ */
 export type PolicyCode =
   | 'signup_bonus_female'
   | 'dm_request_cost'
@@ -42,6 +62,7 @@ export interface Profile {
   region: string
   role: string
   bio: string
+  avatar_url: string | null
   points: number
   gender_benefit_type: GenderBenefitType
   is_adult_checked: boolean
@@ -113,6 +134,5 @@ export interface SignupResult {
 export const POINTS = {
   FEMALE_SIGNUP_BONUS: 270,
   DM_REQUEST_COST: 90,
-  DM_DECLINE_REFUND: 45,
   DM_EXPIRE_REFUND: 90,
 } as const

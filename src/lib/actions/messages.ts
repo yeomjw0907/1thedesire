@@ -48,9 +48,11 @@ export async function sendMessage(
   if (!isParticipant) return err('FORBIDDEN', '권한이 없습니다')
 
   if (room.status !== 'agreed') {
+    // 'declined': 현재 제품에서 신규 생성 불가 (DM 거절 기능 제거).
+    // 과거 DB 레코드에서 읽힐 수 있으므로 사용자 노출 문구만 방어 처리.
     const statusMessages: Record<string, string> = {
       pending: '상대방이 아직 수락하지 않았습니다',
-      declined: '거절된 요청입니다',
+      declined: '종료된 요청입니다', // legacy DB record only — 새 코드에서 이 분기 진입 불가
       expired: '만료된 요청입니다',
       blocked: '차단된 채팅방입니다',
     }

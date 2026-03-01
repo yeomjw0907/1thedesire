@@ -20,8 +20,8 @@ export async function createPost(
   const tags = tagsRaw.length > 0 ? tagsRaw.slice(0, 100) : null
   const imageFile = formData.get('image') as File | null
 
-  if (content.length < 10) {
-    return { success: false, data: null, error: { code: 'VALIDATION', message: '10자 이상 입력해주세요' } }
+  if (content.length < 2) {
+    return { success: false, data: null, error: { code: 'VALIDATION', message: '2자 이상 입력해주세요' } }
   }
   if (content.length > 300) {
     return { success: false, data: null, error: { code: 'VALIDATION', message: '300자를 초과할 수 없습니다' } }

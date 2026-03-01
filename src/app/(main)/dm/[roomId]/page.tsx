@@ -122,7 +122,6 @@ function RoomStatusText({ status }: { status: ChatRoomStatus }) {
   const texts: Partial<Record<ChatRoomStatus, { text: string; color: string }>> = {
     pending: { text: '수락 대기 중', color: 'text-state-warning' },
     agreed: { text: '대화 중', color: 'text-trust-400' },
-    declined: { text: '거절됨', color: 'text-text-muted' },
     expired: { text: '만료됨', color: 'text-text-muted' },
     blocked: { text: '차단됨', color: 'text-state-danger' },
   }

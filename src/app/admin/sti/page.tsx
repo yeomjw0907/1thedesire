@@ -114,8 +114,7 @@ export default async function AdminStiPage({
           { key: 'rejected', label: '반려' },
         ].map(({ key, label }) => (
           <div key={key} className="card text-center">
-            <p className="text-text-strong text-lg font-bold tabular-nums"
-               style={{ fontFamily: 'Montserrat, monospace' }}>
+            <p className="text-text-strong text-lg font-bold tabular-nums">
               {counts[key] ?? 0}
             </p>
             <p className="text-text-muted text-xs mt-1">{label}</p>
@@ -157,7 +156,7 @@ export default async function AdminStiPage({
               className="card flex items-start justify-between gap-3 active:bg-surface-750 transition-colors"
             >
               <div className="flex-1 min-w-0">
-                <p className="text-text-muted text-xs font-mono truncate mb-1">
+                <p className="text-text-muted text-xs truncate mb-1">
                   {sub.user_id.slice(0, 8)}...
                 </p>
                 <p className="text-text-secondary text-xs">
@@ -187,7 +186,7 @@ export default async function AdminStiPage({
           <div className="space-y-2">
             {expiringSoon.map((b) => (
               <div key={b.user_id} className="card flex justify-between items-center gap-3">
-                <p className="text-text-muted text-xs font-mono">{b.user_id.slice(0, 8)}...</p>
+                <p className="text-text-muted text-xs">{b.user_id.slice(0, 8)}...</p>
                 <div className="text-right">
                   <p className="text-text-secondary text-xs">
                     {b.expires_at ? new Date(b.expires_at).toLocaleDateString('ko-KR') : ''}

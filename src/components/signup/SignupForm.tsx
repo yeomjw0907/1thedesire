@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react'
 import { useActionState } from 'react'
 import ReactMarkdown from 'react-markdown'
+import { toast } from 'sonner'
 import { completeSignup } from '@/lib/actions/signup'
 import { REGIONS, AGES } from '@/lib/constants/signup'
+import { AvatarPickerField } from '@/components/signup/AvatarPickerField'
 import type { ApiResponse, SignupResult } from '@/types'
 
 /** 프로필 성향: Dom / Sub / Switch 중 1개만 */
@@ -18,22 +20,27 @@ const ROLE_OPTIONS = [
  * 가입 폼 컴포넌트
  * 기준 문서: onboarding-signup-spec-v0.1.md, copy-library-v0.1.md §5
  */
-export function SignupForm() {
+export function SignupForm({ userId }: { userId: string }) {
   const [state, formAction, isPending] = useActionState<
     ApiResponse<SignupResult> | null,
     FormData
   >(completeSignup, null)
   const [termsOpen, setTermsOpen] = useState(false)
 
+  useEffect(() => {
+    if (state && !state.success && state.error) {
+      toast.error(state.error.message)
+    }
+  }, [state])
+
   return (
     <>
     <form action={formAction} className="space-y-6">
-      {/* 서버 에러 메시지 */}
-      {state && !state.success && state.error && (
-        <div className="p-3 bg-state-danger/10 border border-state-danger/30 rounded-xl">
-          <p className="text-state-danger text-sm">{state.error.message}</p>
-        </div>
-      )}
+
+      {/* 프로필 사진 */}
+      <div className="flex justify-center">
+        <AvatarPickerField userId={userId} />
+      </div>
 
       {/* 닉네임 */}
       <FieldGroup label="닉네임" hint="이 공간에서 사용할 이름">
@@ -224,8 +231,12 @@ function TermsModal({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     fetch('/api/legal/terms')
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error('fetch failed')
+        return res.json()
+      })
       .then((data) => {
+        if (!data.content) throw new Error('empty content')
         setContent(data.content)
         setLoading(false)
       })
@@ -265,7 +276,7 @@ function TermsModal({ onClose }: { onClose: () => void }) {
             <p className="text-text-muted text-sm text-center py-8">불러오는 중...</p>
           ) : (
             <article className="text-text-primary text-sm leading-relaxed
-                              [&_h1]:text-lg [&_h1]:font-serif [&_h1]:mb-3 [&_h1]:text-text-strong
+                              [&_h1]:text-lg [&_h1]:font-semibold [&_h1]:mb-3 [&_h1]:text-text-strong
                               [&_h2]:text-base [&_h2]:font-medium [&_h2]:mt-5 [&_h2]:mb-2 [&_h2]:text-text-strong
                               [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1
                               [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-1

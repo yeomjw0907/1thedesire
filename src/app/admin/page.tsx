@@ -4,6 +4,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { AdminUserActions } from '@/components/admin/AdminUserActions'
 import { AdminPostActions } from '@/components/admin/AdminPostActions'
+import { AdminLogoutButton } from '@/components/admin/AdminLogoutButton'
 import type { AccountStatus } from '@/types'
 
 /**
@@ -77,20 +78,21 @@ export default async function AdminPage({
 
   return (
     <div className="min-h-screen bg-bg-900 px-4 py-6 pb-10">
-      <h1 className="text-text-strong text-xl font-semibold mb-4">어드민</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-text-strong text-xl font-semibold">어드민</h1>
+        <AdminLogoutButton />
+      </div>
 
       {/* DM 통계 */}
-      <div className="grid grid-cols-3 gap-2 mb-6">
+      <div className="grid grid-cols-4 gap-2 mb-6">
         {[
           { key: 'pending', label: '대기' },
           { key: 'agreed', label: '진행중' },
-          { key: 'declined', label: '거절' },
           { key: 'expired', label: '만료' },
           { key: 'blocked', label: '차단' },
         ].map(({ key, label }) => (
           <div key={key} className="card text-center">
-            <p className="text-text-strong text-lg font-bold tabular-nums"
-               style={{ fontFamily: 'Montserrat, monospace' }}>
+            <p className="text-text-strong text-lg font-bold tabular-nums">
               {statCounts[key] ?? 0}
             </p>
             <p className="text-text-muted text-xs mt-1">{label}</p>
@@ -205,8 +207,7 @@ export default async function AdminPage({
                       <p className="text-text-muted text-xs">{formatDate(u.created_at)}</p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-text-secondary text-xs tabular-nums"
-                            style={{ fontFamily: 'Montserrat, monospace' }}>
+                      <span className="text-text-secondary text-xs tabular-nums">
                         {u.points}P
                       </span>
                       <StatusBadge status={u.account_status} />

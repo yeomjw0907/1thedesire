@@ -18,7 +18,6 @@ export default async function ProfileDetailPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // 프로필 조회
   const { data: profile, error } = await supabase
     .from('profiles')
     .select('*')
@@ -27,7 +26,6 @@ export default async function ProfileDetailPage({
 
   if (error || !profile) notFound()
 
-  // 최근 게시글 (최신 5개)
   const { data: posts } = await supabase
     .from('posts')
     .select('id, content, image_url, tags, created_at')
@@ -55,7 +53,6 @@ export default async function ProfileDetailPage({
     myPoints = myProfile?.points ?? 0
   }
 
-  // 공개 STI 배지 조회 (verified + is_public + not expired 조건)
   const { data: stiBadgeRow } = await supabase
     .from('public_sti_badges')
     .select('user_id, test_date, expires_at, verified_at')
@@ -64,11 +61,16 @@ export default async function ProfileDetailPage({
 
   const publicStiBadge = stiBadgeRow as PublicStiBadge | null
 
+  // 성향 태그 파싱
+  const roleTags = profile.role
+    ? profile.role.split(/[,·\s·]+/).map((t: string) => t.trim()).filter(Boolean)
+    : []
+
   return (
     <div className="flex flex-col min-h-full pb-36">
       {/* 상단 바 */}
       <header className="sticky top-0 z-10 flex items-center justify-between
-                         px-2 py-2 bg-bg-900/95 backdrop-blur-sm">
+                         px-2 py-2 bg-bg-900/95 backdrop-blur-sm border-b border-surface-700/30">
         <Link
           href="/home"
           className="p-2 text-text-secondary active:text-text-primary transition-colors"
@@ -85,47 +87,84 @@ export default async function ProfileDetailPage({
             <BlockSheet targetUserId={id} targetNickname={profile.nickname} isBlocked={isBlocked} />
           </div>
         )}
-        {isSelf && (
-          <span className="text-text-muted text-xs pr-3">내 프로필</span>
-        )}
+        {/* 편집 버튼은 닉네임 옆으로 이동 */}
       </header>
 
-      {/* 프로필 헤더 */}
-      <section className="px-6 pt-5 pb-6 border-b border-surface-700/40">
-        <h1 className="text-text-strong text-[26px] font-semibold mb-2 leading-tight">
-          {profile.nickname}
-        </h1>
-        <p className="text-text-secondary text-sm mb-3">
-          {profile.age_group} · {profile.region} · {genderLabel(profile.gender)}
-        </p>
-        {profile.role && (
+      {/* 프로필 헤더 - 아바타 + 기본 정보 */}
+      <section className="px-6 pt-6 pb-5 border-b border-surface-700/40">
+        <div className="flex items-start gap-4 mb-4">
+          {/* 아바타 */}
+          <div className="w-16 h-16 rounded-full bg-surface-700 flex items-center justify-center
+                          flex-shrink-0 text-2xl font-semibold text-text-muted border border-surface-600 overflow-hidden">
+            {profile.avatar_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={profile.avatar_url} alt={profile.nickname} className="w-full h-full object-cover" />
+            ) : (
+              <span>{profile.nickname?.[0] ?? '?'}</span>
+            )}
+          </div>
+          <div className="min-w-0 flex-1 pt-1">
+            <div className="flex items-baseline justify-between mb-1">
+              <h1 className="text-text-strong text-[22px] font-semibold leading-tight">
+                {profile.nickname}
+              </h1>
+              {isSelf && (
+                <Link
+                  href="/profile/edit"
+                  className="text-text-muted text-sm active:text-text-secondary transition-colors flex-shrink-0"
+                >
+                  편집
+                </Link>
+              )}
+            </div>
+            <p className="text-text-secondary text-sm">
+              {profile.age_group} · {profile.region} · {genderLabel(profile.gender)}
+            </p>
+          </div>
+        </div>
+
+        {/* 성향 태그 */}
+        {roleTags.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
-            <span className="px-2.5 py-0.5 rounded-chip text-xs
-                           bg-surface-750 text-text-secondary border border-surface-700">
-              {profile.role.split(/[,·\s·]+/)[0]?.trim() ?? profile.role}
-            </span>
+            {roleTags.map((tag: string) => (
+              <span
+                key={tag}
+                className="px-2.5 py-1 rounded-chip text-xs
+                           bg-surface-750 text-text-secondary border border-surface-700"
+              >
+                {tag}
+              </span>
+            ))}
           </div>
         )}
       </section>
 
-      {/* STI 배지 (공개 조건 충족 시) */}
-      {publicStiBadge && (
-        <section className="px-6 py-3 border-b border-surface-700/40">
-          <StiVerificationBadge badge={publicStiBadge} />
-        </section>
-      )}
-
-      {/* 상태 라인 */}
+      {/* 신뢰 정보 섹션 */}
       <section className="px-6 py-4 border-b border-surface-700/40">
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
+        <h2 className="text-text-muted text-[11px] font-medium tracking-widest uppercase mb-3">
+          신뢰 정보
+        </h2>
+        <div className="space-y-2.5">
+          {/* 최근검사 확인 배지 */}
+          {publicStiBadge ? (
+            <StiVerificationBadge badge={publicStiBadge} />
+          ) : (
+            <p className="text-text-muted text-xs">최근검사 확인 정보 없음</p>
+          )}
+
+          {/* 최근 활동 */}
           <div className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-state-success inline-block" />
             <span className="text-text-muted text-xs">
               최근 활동: {getLastActive(profile.updated_at)}
             </span>
           </div>
+
+          {/* 여성 메리트 */}
           {profile.gender === 'female' && (
-            <span className="text-trust-400 text-xs">받은 요청 수락 무료</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-trust-400 text-xs">받은 요청 수락 무료</span>
+            </div>
           )}
         </div>
       </section>
@@ -143,12 +182,12 @@ export default async function ProfileDetailPage({
         </section>
       )}
 
-      {/* 최근 분위기 */}
+      {/* 최근 분위기 - 본인/상대 모두 표시, 홈→프로필→DM 판단 흐름 지원 */}
       {posts && posts.length > 0 && (
         <section className="px-6 py-5">
           <h2 className="text-text-muted text-[11px] font-medium mb-3
                          tracking-widest uppercase">
-            최근 분위기
+            {isSelf ? '내 글' : '최근 글'}
           </h2>
           <div className="space-y-3">
             {posts.map((post) => {
@@ -191,13 +230,6 @@ export default async function ProfileDetailPage({
         </section>
       )}
 
-      {/* 게시글 없음 */}
-      {(!posts || posts.length === 0) && (
-        <div className="px-6 py-8 text-center">
-          <p className="text-text-muted text-sm">아직 남긴 분위기가 없습니다</p>
-        </div>
-      )}
-
       {/* Sticky CTA */}
       {!isSelf && (
         <div className="fixed bottom-20 left-1/2 -translate-x-1/2 w-full max-w-md px-4 z-40">
@@ -224,7 +256,7 @@ export default async function ProfileDetailPage({
                        bg-desire-500/15 text-desire-400 font-semibold
                        active:bg-desire-500/25 transition-colors"
           >
-            분위기 남기기
+            글 작성하기
           </Link>
         </div>
       )}

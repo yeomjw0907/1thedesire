@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { createPortal } from 'react-dom'
 import { reportUser } from '@/lib/actions/social'
 
 const REPORT_REASONS = [
@@ -44,7 +45,7 @@ export function ReportSheet({ targetUserId, targetNickname }: Props) {
         신고
       </button>
 
-      {open && (
+      {open && createPortal(
         <div className="fixed inset-0 z-50 flex flex-col justify-end">
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"
@@ -107,7 +108,8 @@ export function ReportSheet({ targetUserId, targetNickname }: Props) {
               </>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )

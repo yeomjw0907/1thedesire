@@ -124,7 +124,7 @@ function CompletionItem({
 
   return (
     <div className="flex items-start gap-3">
-      <span className={`${iconColor} text-sm font-mono mt-0.5 flex-shrink-0`}>{icon}</span>
+      <span className={`${iconColor} text-sm mt-0.5 flex-shrink-0`}>{icon}</span>
       <div>
         <p className="text-text-primary text-sm">{text}</p>
         {sub && <p className="text-text-muted text-xs mt-0.5">{sub}</p>}

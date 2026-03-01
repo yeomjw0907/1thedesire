@@ -13,7 +13,11 @@ export default async function RootPage() {
     redirect('/login')
   }
 
-  // 프로필 확인
+  const adminEmails = (process.env.ADMIN_EMAILS ?? '').split(',').map(e => e.trim())
+  if (adminEmails.includes(user.email ?? '')) {
+    redirect('/admin')
+  }
+
   const { data: profile } = await supabase
     .from('profiles')
     .select('id')

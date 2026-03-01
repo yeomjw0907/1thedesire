@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>욕망백서 - 로그인 인증</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0B0B0D;font-family:'Pretendard',system-ui,-apple-system,'Segoe UI',sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#0B0B0D;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:420px;background-color:#17171B;border-radius:20px;border:1px solid rgba(255,255,255,0.06);overflow:hidden;">
+          <!-- Header -->
+          <tr>
+            <td style="padding:32px 32px 0;text-align:center;">
+              <p style="margin:0 0 6px;font-size:11px;letter-spacing:3px;color:#7C756F;text-transform:uppercase;font-family:Georgia,'Times New Roman',serif;">
+                Desire Ledger
+              </p>
+              <h1 style="margin:0;font-size:24px;font-weight:700;color:#F3EEE8;font-family:Georgia,'Times New Roman',serif;">
+                욕망백서
+              </h1>
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr>
+            <td style="padding:24px 32px 0;">
+              <div style="height:1px;background-color:rgba(255,255,255,0.06);"></div>
+            </td>
+          </tr>
+
+          <!-- Title -->
+          <tr>
+            <td style="padding:24px 32px 0;text-align:center;">
+              <p style="margin:0;font-size:16px;font-weight:600;color:#DDD6CF;">
+                로그인 인증번호
+              </p>
+              <p style="margin:8px 0 0;font-size:13px;color:#7C756F;line-height:1.6;">
+                아래 인증번호를 입력하면 로그인이 완료됩니다.
+              </p>
+            </td>
+          </tr>
+
+          <!-- OTP Code -->
+          <tr>
+            <td style="padding:24px 32px 0;" align="center">
+              <div style="display:inline-block;background-color:#C91F4A;border-radius:14px;padding:18px 40px;">
+                <span style="font-size:32px;font-weight:700;letter-spacing:8px;color:#FFFFFF;font-family:'Courier New',monospace;">
+                  {{ .Token }}
+                </span>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Info -->
+          <tr>
+            <td style="padding:24px 32px 0;text-align:center;">
+              <p style="margin:0;font-size:12px;color:#7C756F;line-height:1.7;">
+                이 인증번호는 <strong style="color:#AFA7A0;">10분간</strong> 유효합니다.<br />
+                본인이 요청하지 않았다면 이 메일을 무시하셔도 됩니다.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:32px 32px;">
+              <div style="height:1px;background-color:rgba(255,255,255,0.06);margin-bottom:20px;"></div>
+              <p style="margin:0;font-size:11px;color:#7C756F;text-align:center;line-height:1.7;">
+                욕망백서 · 취향을 안전하게 나누는 익명 플랫폼<br />
+                이 메일은 발신 전용이며 회신되지 않습니다.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

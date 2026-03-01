@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { acceptDmRequest, declineDmRequest, blockFromRoom } from '@/lib/actions/dm'
+import { acceptDmRequest, blockFromRoom } from '@/lib/actions/dm'
 import { sendMessage } from '@/lib/actions/messages'
 import { createClient } from '@/lib/supabase/client'
 import type { ChatRoomStatus } from '@/types'
@@ -86,17 +86,6 @@ export function ChatRoomClient({ room, messages, currentUserId, otherNickname }:
     })
   }
 
-  function handleDecline() {
-    startTransition(async () => {
-      const result = await declineDmRequest(room.id)
-      if (result.success) {
-        router.push('/dm')
-      } else {
-        setLocalError(result.error?.message ?? '거절에 실패했습니다')
-      }
-    })
-  }
-
   function handleBlock() {
     startTransition(async () => {
       const result = await blockFromRoom(room.id)
@@ -140,7 +129,6 @@ export function ChatRoomClient({ room, messages, currentUserId, otherNickname }:
 
   const statusLabel: Partial<Record<ChatRoomStatus, string>> = {
     pending: '수락 대기 중',
-    declined: '거절된 요청',
     expired: '만료된 요청',
     blocked: '차단된 채팅방',
   }
@@ -154,21 +142,12 @@ export function ChatRoomClient({ room, messages, currentUserId, otherNickname }:
             {otherNickname}님의 대화 요청
           </p>
           <p className="text-text-muted text-xs mb-4">
-            수락하면 대화를 시작할 수 있습니다. 거절하면 상대방에게 45P가 환불됩니다.
+            수락하면 대화를 시작할 수 있습니다. 원하지 않으면 응답 없이 두면 24시간 후 자동 만료됩니다.
           </p>
           {localError && (
             <p className="text-state-danger text-sm mb-3">{localError}</p>
           )}
           <div className="flex gap-2">
-            <button
-              onClick={handleDecline}
-              disabled={isPending}
-              className="flex-1 py-3 rounded-chip bg-surface-700 text-text-secondary
-                         text-sm font-medium active:bg-surface-700/70
-                         disabled:opacity-40 transition-colors"
-            >
-              거절
-            </button>
             <button
               onClick={handleAccept}
               disabled={isPending}
@@ -176,9 +155,43 @@ export function ChatRoomClient({ room, messages, currentUserId, otherNickname }:
                          text-sm font-semibold active:bg-desire-400
                          disabled:opacity-40 transition-colors"
             >
-              {isPending ? '처리 중...' : '수락'}
+              {isPending ? '처리 중...' : '수락하기'}
             </button>
           </div>
+          {!showBlockConfirm && (
+            <p className="text-center mt-3">
+              <button
+                type="button"
+                onClick={() => setShowBlockConfirm(true)}
+                className="text-state-danger text-xs active:opacity-70"
+              >
+                이 사용자 차단
+              </button>
+            </p>
+          )}
+          {showBlockConfirm && (
+            <div className="mt-3 pt-3 border-t border-surface-700/50">
+              <p className="text-text-primary text-sm mb-2">
+                차단하면 이 요청이 종료됩니다. 차단 시 환불되지 않습니다.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowBlockConfirm(false)}
+                  className="flex-1 py-2 rounded-chip bg-surface-700 text-text-secondary text-xs"
+                >
+                  돌아가기
+                </button>
+                <button
+                  onClick={handleBlock}
+                  disabled={isPending}
+                  className="flex-1 py-2 rounded-chip bg-state-danger/80 text-white text-xs
+                             disabled:opacity-40"
+                >
+                  {isPending ? '처리 중...' : '차단'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -190,7 +203,7 @@ export function ChatRoomClient({ room, messages, currentUserId, otherNickname }:
           </p>
           {room.request_expires_at && (
             <p className="text-text-muted text-xs text-center mt-1">
-              <ExpiryText expiresAt={room.request_expires_at} />
+              응답 없으면 <ExpiryText expiresAt={room.request_expires_at} /> 후 자동 만료 · 전액 환불
             </p>
           )}
           {!showBlockConfirm && (
@@ -207,7 +220,7 @@ export function ChatRoomClient({ room, messages, currentUserId, otherNickname }:
           {showBlockConfirm && (
             <div className="mt-3 pt-3 border-t border-surface-700/50">
               <p className="text-text-primary text-sm mb-2">
-                요청을 취소하면 90P가 환불되지 않습니다. 진행하시겠습니까?
+                취소하면 상대방이 차단되며 포인트는 환불되지 않습니다.
               </p>
               <div className="flex gap-2">
                 <button

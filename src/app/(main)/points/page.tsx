@@ -39,13 +39,12 @@ export default async function PointsPage() {
           <p className="text-text-muted text-xs mb-2">보유 포인트</p>
           <p
             className="text-text-strong text-4xl font-bold tabular-nums"
-            style={{ fontFamily: 'Montserrat, monospace' }}
           >
             {profile?.points ?? 0}
             <span className="text-text-muted text-xl font-normal ml-1">P</span>
           </p>
           <p className="text-text-muted text-xs mt-3">
-            DM 요청 1회 90P · 거절 시 45P 환불 · 미응답 시 전액 환불
+            DM 요청 1회 90P · 미응답 시 전액 환불 · 수락 후 대화 무료
           </p>
         </div>
 
@@ -89,13 +88,11 @@ function TransactionRow({ tx }: { tx: PointTransaction }) {
       <div className="flex-shrink-0 text-right">
         <p
           className={`font-semibold text-sm tabular-nums ${amountColor}`}
-          style={{ fontFamily: 'Montserrat, monospace' }}
         >
           {amountStr}
         </p>
         <p
           className="text-text-muted text-[10px] tabular-nums mt-0.5"
-          style={{ fontFamily: 'Montserrat, monospace' }}
         >
           잔액 {tx.balance_after}P
         </p>

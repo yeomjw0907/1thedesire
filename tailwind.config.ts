@@ -48,8 +48,6 @@ const config: Config = {
       },
       fontFamily: {
         sans: ['Pretendard', 'system-ui', '-apple-system', 'sans-serif'],
-        serif: ['Cormorant Garamond', 'Georgia', 'serif'],
-        mono: ['Montserrat', 'monospace'],
       },
       borderRadius: {
         card: '20px',

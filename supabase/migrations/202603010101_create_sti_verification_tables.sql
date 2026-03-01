@@ -70,7 +70,10 @@ for each row
 execute function public.set_updated_at();
 
 -- 공개용 최소 필드 뷰
-create or replace view public.public_sti_badges as
+-- security_invoker = on: 쿼리하는 사용자의 RLS 정책을 따름 (SECURITY DEFINER 방지)
+create or replace view public.public_sti_badges
+  with (security_invoker = on)
+as
 select
   user_id,
   test_date,

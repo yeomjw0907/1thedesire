@@ -6,10 +6,10 @@ export default function MobileOnlyPage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
       <div className="max-w-sm space-y-4">
-        <p className="text-text-muted text-sm font-serif tracking-widest uppercase">
+        <p className="text-text-muted text-sm font-medium tracking-widest uppercase">
           Desire Ledger
         </p>
-        <h1 className="text-text-strong font-serif text-2xl">
+        <h1 className="text-text-strong font-bold text-2xl">
           모바일에서 이용해 주세요
         </h1>
         <p className="text-text-secondary text-sm leading-relaxed">

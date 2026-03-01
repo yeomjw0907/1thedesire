@@ -37,10 +37,10 @@ export default async function LoginPage({
       {/* 로고 영역 */}
       <div className="flex-1 flex flex-col justify-center">
         <div className="mb-16">
-          <p className="text-text-muted text-sm font-serif tracking-widest mb-3 uppercase">
+          <p className="text-text-muted text-sm font-medium tracking-widest mb-3 uppercase">
             Desire Ledger
           </p>
-          <h1 className="text-text-strong font-serif text-4xl leading-tight mb-4">
+          <h1 className="text-text-strong font-bold text-4xl leading-tight mb-4">
             욕망백서
           </h1>
           <p className="text-text-primary text-lg leading-relaxed">

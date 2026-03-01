@@ -50,7 +50,7 @@ export default async function SignupPage() {
           </p>
         </div>
 
-        <SignupForm />
+        <SignupForm userId={user.id} />
       </div>
     </main>
   )

@@ -549,7 +549,41 @@ export async function rejectStiVerificationSubmission(
 }
 
 // ─────────────────────────────────────────────
-// 8. 사용자: 내 배지 상태 조회
+// 8. 사용자: 내 검증 상태만 조회 (프로필 페이지용)
+// sti_check_badges에 sti_badges_select_own RLS 정책(user_id = auth.uid())이 적용돼 있어
+// 일반 server client로 안전하게 조회 가능. admin client 불필요.
+// ─────────────────────────────────────────────
+
+export type StiVerificationStatus =
+  | 'pending'
+  | 'under_review'
+  | 'verified'
+  | 'rejected'
+  | 'revoked'
+  | 'none'
+
+export async function getMyVerificationStatus(): Promise<StiVerificationStatus | null> {
+  const supabase = await createServerClient()
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) return null
+
+  const { data, error } = await supabase
+    .from('sti_check_badges')
+    .select('verification_status')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (error) {
+    console.error('[STI] getMyVerificationStatus 조회 실패:', error)
+    return null
+  }
+
+  return (data?.verification_status as StiVerificationStatus) ?? null
+}
+
+// ─────────────────────────────────────────────
+// 9. 사용자: 내 배지 상태 조회 (전체 row)
 // ─────────────────────────────────────────────
 
 export async function getMyStiBadge(): Promise<ApiResponse<StiCheckBadge | null>> {
@@ -572,7 +606,7 @@ export async function getMyStiBadge(): Promise<ApiResponse<StiCheckBadge | null>
 }
 
 // ─────────────────────────────────────────────
-// 9. 사용자: 내 최근 제출 조회
+// 10. 사용자: 내 최근 제출 조회
 // ─────────────────────────────────────────────
 
 export async function getMyLatestStiSubmission(): Promise<ApiResponse<StiCheckSubmission | null>> {

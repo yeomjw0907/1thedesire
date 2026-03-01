@@ -100,6 +100,25 @@ export async function completeSignup(
   const isFemale = result?.is_female ?? false
   const initialPoints = result?.initial_points ?? 0
 
+  // 아바타 URL 업데이트 (선택 사항)
+  const avatarUrl = (formData.get('avatar_url') as string)?.trim()
+  if (avatarUrl) {
+    await admin.from('profiles').update({ avatar_url: avatarUrl }).eq('id', user.id)
+  }
+
+  // 자동 생성된 첫 글에 "인사말" 태그 추가
+  const { data: firstPost } = await admin
+    .from('posts')
+    .select('id')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  if (firstPost) {
+    await admin.from('posts').update({ tags: '인사말' }).eq('id', firstPost.id)
+  }
+
   const params = new URLSearchParams({
     female: isFemale ? '1' : '0',
     points: String(initialPoints),
@@ -148,21 +167,10 @@ function validateSignupInput(input: SignupInput): { code: string; message: strin
 }
 
 /**
- * 자동 소개글 생성
- * 사용자의 자기소개와 성향을 기반으로 첫 게시글 작성
+ * 자동 소개글 생성 - 간단한 인사말만 사용
  */
-function generateAutoPost(input: SignupInput): string {
-  const lines: string[] = []
-
-  if (input.bio) {
-    lines.push(input.bio)
-  }
-
-  if (input.role) {
-    lines.push(`\n성향: ${input.role}`)
-  }
-
-  return lines.join('')
+function generateAutoPost(_input: SignupInput): string {
+  return '안녕하세요'
 }
 
 /**

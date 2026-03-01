@@ -7,7 +7,7 @@ import type { ApiResponse } from '@/types'
 
 const MAX_CHARS = 300
 const TAGS_SEP = ' · '
-const POST_TAG_OPTIONS = ['FWB', '감성 연애', '대화 위주', '만남 위주'] as const
+const POST_TAG_OPTIONS = ['인사말', 'FWB', '감성 연애', '대화 위주', '만남 위주'] as const
 
 export default function WritePostPage() {
   const [state, action, isPending] = useActionState<ApiResponse | null, FormData>(
@@ -38,7 +38,7 @@ export default function WritePostPage() {
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
-  const canSubmit = content.trim().length >= 10 && !isPending
+  const canSubmit = content.trim().length >= 2 && !isPending
   const nearLimit = content.length > MAX_CHARS * 0.85
 
   return (
@@ -116,7 +116,7 @@ export default function WritePostPage() {
 
         {/* 글 태그 (선택) */}
         <div className="px-5 pt-4 pb-2 border-t border-surface-700/50">
-          <p className="text-text-muted text-xs font-medium mb-2">이 글의 맥락 (선택)</p>
+          <p className="text-text-muted text-xs font-medium mb-2">태그 (선택)</p>
           <div className="flex flex-wrap gap-2">
             {POST_TAG_OPTIONS.map((tag) => (
               <button
@@ -165,8 +165,7 @@ export default function WritePostPage() {
           </button>
           <span className={`text-xs tabular-nums ${
             nearLimit ? 'text-state-warning' : 'text-text-muted'
-          }`}
-            style={{ fontFamily: 'Montserrat, monospace' }}>
+          }`}>
             {content.length} / {MAX_CHARS}
           </span>
         </div>

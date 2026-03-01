@@ -6,11 +6,11 @@
  *
  * 상태 전이:
  *   pending → agreed    (receiver 수락)
- *   pending → declined  (receiver 거절) + 45P 환불
  *   pending → expired   (cron, 24h 미응답) + 90P 환불
  *   pending → blocked   (any party 차단) + 환불 없음
  *   agreed  → blocked   (any party 차단) + 환불 없음
  *
+ * 거절(declined) 상태는 제품에서 제거됨. DB 히스토리 레코드는 유지.
  * 환불 중복 방지:
  *   .eq('status', 'pending') 조건으로 atomic update.
  *   update가 0 rows 영향 시 이미 처리된 것으로 간주, 환불 skip.
@@ -139,41 +139,7 @@ export async function acceptDmRequest(roomId: string): Promise<ApiResponse> {
 }
 
 // ──────────────────────────────────────────────────────────────
-// 3. 거절 (pending → declined) + 45P 환불
-//    핵심: .eq('status','pending') atomic update로 환불 중복 방지
-// ──────────────────────────────────────────────────────────────
-export async function declineDmRequest(roomId: string): Promise<ApiResponse> {
-  const supabase = await createServerClient()
-  const admin = createAdminClient()
-
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  if (authError || !user) return err('UNAUTHORIZED', '로그인이 필요합니다')
-
-  const refundAmount = POINTS.DM_DECLINE_REFUND // 45P
-
-  // RPC: 상태 전이 + 환불 + 로그를 하나의 트랜잭션으로
-  const { data: result, error: rpcErr } = await admin.rpc('decline_and_refund', {
-    p_room_id: roomId,
-    p_actor_id: user.id,
-    p_refund_amount: refundAmount,
-  })
-
-  if (rpcErr) {
-    const msg = rpcErr.message ?? ''
-    if (msg.includes('NOT_FOUND')) return err('NOT_FOUND', '요청을 찾을 수 없습니다')
-    if (msg.includes('FORBIDDEN')) return err('FORBIDDEN', '수신자만 거절할 수 있습니다')
-    return err('DB_ERROR', '거절 처리에 실패했습니다')
-  }
-
-  if (result === false) {
-    return err('REFUND_ALREADY_APPLIED', '이미 처리된 요청입니다')
-  }
-
-  return { success: true, data: null, error: null }
-}
-
-// ──────────────────────────────────────────────────────────────
-// 4. 채팅룸에서 차단 (pending/agreed → blocked, 환불 없음)
+// 3. 채팅룸에서 차단 (pending/agreed → blocked, 환불 없음)
 // ──────────────────────────────────────────────────────────────
 export async function blockFromRoom(roomId: string): Promise<ApiResponse> {
   const supabase = await createServerClient()

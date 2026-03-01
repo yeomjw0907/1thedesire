@@ -3,6 +3,7 @@
 import { useActionState } from 'react'
 import { updateProfile } from '@/lib/actions/profile'
 import { REGIONS } from '@/lib/constants/signup'
+import { AvatarUploadButton } from '@/components/profile/AvatarUploadButton'
 import type { ApiResponse, Profile } from '@/types'
 
 const ROLE_OPTIONS = [
@@ -20,7 +21,7 @@ function getRoleDefault(role: string | undefined): string {
 }
 
 interface Props {
-  profile: Pick<Profile, 'nickname' | 'gender' | 'age_group' | 'region' | 'role' | 'bio'>
+  profile: Pick<Profile, 'id' | 'nickname' | 'gender' | 'age_group' | 'region' | 'role' | 'bio' | 'avatar_url'>
 }
 
 export function ProfileEditForm({ profile }: Props) {
@@ -36,6 +37,19 @@ export function ProfileEditForm({ profile }: Props) {
           <p className="text-state-danger text-sm">{state.error.message}</p>
         </div>
       )}
+
+      {/* 프로필 이미지 */}
+      <div className="space-y-2">
+        <div className="flex items-baseline gap-2">
+          <span className="text-text-primary text-sm font-medium">프로필 이미지</span>
+          <span className="text-text-muted text-xs">선택</span>
+        </div>
+        <AvatarUploadButton
+          userId={profile.id}
+          nickname={profile.nickname}
+          currentAvatarUrl={profile.avatar_url}
+        />
+      </div>
 
       {/* 닉네임 */}
       <FieldGroup label="닉네임" hint="2~20자">
