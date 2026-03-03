@@ -43,7 +43,7 @@ export async function createChargeRequest(
     status: 'pending',
     amount: amountKrw,
     raw_payload: { points, depositor_name: depositorName },
-  }).then(() => {}).catch(() => {})
+  }).then(() => {}, () => {})
 
   return { success: true, data: null, error: null }
 }
@@ -105,7 +105,7 @@ export async function approveCharge(transactionId: string): Promise<ApiResponse>
     user_id: row.user_id,
     type: 'charge_completed',
     message: '정상적으로 충전되었습니다.',
-  }).then(() => {}).catch(() => {})
+  }).then(() => {}, () => {})
 
   return { success: true, data: null, error: null }
 }
@@ -161,7 +161,7 @@ export async function rejectCharge(transactionId: string, reason: string): Promi
     user_id: row.user_id,
     type: 'charge_rejected',
     message,
-  }).then(() => {}).catch(() => {})
+  }).then(() => {}, () => {})
 
   return { success: true, data: null, error: null }
 }
