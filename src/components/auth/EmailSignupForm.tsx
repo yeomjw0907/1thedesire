@@ -148,7 +148,7 @@ export function EmailSignupForm() {
           <p className="text-trust-400 text-sm font-medium mb-1">인증번호를 보냈습니다</p>
           <p className="text-text-secondary text-xs leading-relaxed">
             <span className="text-text-primary font-medium">{email}</span> 으로 발송된
-            6자리 인증번호를 입력해 주세요.
+            8자리 인증번호를 입력해 주세요.
           </p>
           <p className="text-text-muted text-xs mt-2">
             메일이 안 보이면 스팸함도 확인해 주세요.
@@ -159,10 +159,10 @@ export function EmailSignupForm() {
             type="text"
             inputMode="numeric"
             autoComplete="one-time-code"
-            maxLength={6}
+            maxLength={8}
             value={otpCode}
             onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-            placeholder="000000"
+            placeholder="00000000"
             disabled={verifyLoading}
             className="input-field w-full py-4 rounded-chip text-center text-lg tracking-[0.4em] font-medium
                        placeholder:text-text-muted/60
@@ -171,7 +171,7 @@ export function EmailSignupForm() {
           />
           <button
             type="submit"
-            disabled={verifyLoading || otpCode.trim().length < 6}
+            disabled={verifyLoading || otpCode.trim().length < 8}
             className="btn-primary w-full"
           >
             {verifyLoading ? '확인 중...' : '인증하기'}

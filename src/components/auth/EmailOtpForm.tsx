@@ -19,7 +19,7 @@ const EMAIL_DOMAINS = [
 
 /**
  * 이메일 OTP 로그인
- * signInWithOtp → 이메일로 6자리 코드 발송 → verifyOtp 후 세션 생성
+ * signInWithOtp → 이메일로 8자리 코드 발송 → verifyOtp 후 세션 생성
  */
 export function EmailOtpForm() {
   const router = useRouter()
@@ -101,7 +101,11 @@ export function EmailOtpForm() {
     if (profile) {
       router.push('/home')
     } else {
-      router.push('/signup')
+      await supabase.auth.signOut()
+      toast.error('일치하는 회원이 없습니다.')
+      setSent(false)
+      setSentEmail('')
+      setOtpCode('')
     }
   }
 
@@ -110,7 +114,7 @@ export function EmailOtpForm() {
       <div className="space-y-3">
         <div className="p-4 rounded-xl bg-state-success/10 border border-state-success/30">
           <p className="text-state-success text-sm text-center">
-            이메일로 인증번호를 보냈어요.<br />아래에 6자리 번호를 입력하세요.
+            이메일로 인증번호를 보냈어요.<br />아래에 8자리 번호를 입력하세요.
           </p>
         </div>
         <form onSubmit={handleVerifyOtp} className="space-y-3">
@@ -118,10 +122,10 @@ export function EmailOtpForm() {
             type="text"
             inputMode="numeric"
             autoComplete="one-time-code"
-            maxLength={6}
+            maxLength={8}
             value={otpCode}
             onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-            placeholder="000000"
+            placeholder="00000000"
             disabled={verifyLoading}
             className="input-field w-full py-4 rounded-chip text-center text-lg tracking-[0.4em] font-medium
                        placeholder:text-text-muted/60
@@ -130,7 +134,7 @@ export function EmailOtpForm() {
           />
           <button
             type="submit"
-            disabled={verifyLoading || otpCode.trim().length < 6}
+            disabled={verifyLoading || otpCode.trim().length < 8}
             className="btn-primary w-full"
           >
             {verifyLoading ? '확인 중...' : '인증하기'}

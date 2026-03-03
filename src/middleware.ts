@@ -50,11 +50,22 @@ export async function middleware(request: NextRequest) {
 
   // 비인증 사용자
   if (!user) {
-    if (pathname === '/login' || pathname === '/join') return supabaseResponse
+    if (
+      pathname === '/login' ||
+      pathname === '/join' ||
+      pathname.startsWith('/login/forgot-password') ||
+      pathname.startsWith('/login/reset-password')
+    )
+      return supabaseResponse
 
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
+  }
+
+  // 비밀번호 찾기/재설정은 인증 여부와 관계없이 통과
+  if (pathname.startsWith('/login/forgot-password') || pathname.startsWith('/login/reset-password')) {
+    return supabaseResponse
   }
 
   // 인증된 사용자가 /login 또는 /join 에 접근하면 프로필 유무에 따라 분기

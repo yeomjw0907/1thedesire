@@ -80,6 +80,14 @@ export default async function LoginPage({
           <p className="text-center text-text-muted text-xs mt-4 leading-relaxed">
             원치 않는 요청은 언제든 거절하거나 차단할 수 있습니다
           </p>
+          <p className="text-center mt-3">
+            <Link
+              href="/login/forgot-password"
+              className="text-text-muted text-xs underline hover:text-text-secondary"
+            >
+              비밀번호 찾기
+            </Link>
+          </p>
         </section>
 
         {/* 회원가입 */}
