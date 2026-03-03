@@ -4,6 +4,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { AdminUserActions } from '@/components/admin/AdminUserActions'
 import { AdminPostActions } from '@/components/admin/AdminPostActions'
+import { AdminChargeActions } from '@/components/admin/AdminChargeActions'
 import { AdminLogoutButton } from '@/components/admin/AdminLogoutButton'
 import type { AccountStatus } from '@/types'
 
@@ -36,15 +37,16 @@ export default async function AdminPage({
   if (!isDbAdmin && !isEnvAdmin) redirect('/home')
 
   const { section } = await searchParams
-  const activeSection = section ?? 'reports'
+  const activeSection = section ?? 'charges'
 
   const admin = createAdminClient()
 
-  const [roomStatsRes, reportsRes, recentUsersRes, recentPostsRes] = await Promise.all([
+  const [roomStatsRes, reportsRes, recentUsersRes, recentPostsRes, pendingChargesRes] = await Promise.all([
     admin.from('chat_rooms').select('status'),
     admin.from('reports').select('id, reason, status, created_at, reporter:reporter_id (id, nickname), target:target_user_id (id, nickname, account_status, points)').order('created_at', { ascending: false }).limit(30),
     admin.from('profiles').select('id, nickname, gender, created_at, account_status, points').order('created_at', { ascending: false }).limit(30),
     admin.from('posts').select('id, content, status, created_at, profiles:user_id (id, nickname)').in('status', ['published', 'hidden']).order('created_at', { ascending: false }).limit(30),
+    admin.from('point_transactions').select('id, user_id, amount, amount_krw, depositor_name, description, created_at, profiles:user_id (id, nickname)').eq('type', 'charge').eq('charge_status', 'pending').order('created_at', { ascending: false }).limit(50),
   ])
 
   const roomStats = roomStatsRes.data
@@ -55,6 +57,7 @@ export default async function AdminPage({
   const reports = reportsRes.data
   const recentUsers = recentUsersRes.data
   const recentPosts = recentPostsRes.data
+  const pendingCharges = pendingChargesRes.data ?? []
 
   return (
     <div className="min-h-screen bg-bg-900 px-4 py-6 pb-10">
@@ -95,9 +98,10 @@ export default async function AdminPage({
         </svg>
       </Link>
 
-      {/* 섹션 탭 */}
+      {/* 섹션 탭: 충전 → 신고 → 유저 → 게시글 */}
       <div className="flex gap-1 mb-5 border-b border-surface-700/40 pb-3">
         {[
+          { key: 'charges', label: '충전' },
           { key: 'reports', label: '신고' },
           { key: 'users', label: '유저' },
           { key: 'posts', label: '게시글' },
@@ -114,6 +118,50 @@ export default async function AdminPage({
           </Link>
         ))}
       </div>
+
+      {/* 충전 섹션 */}
+      {activeSection === 'charges' && (
+        <section>
+          <h2 className="text-text-muted text-[11px] font-medium tracking-widest uppercase mb-3">
+            충전 대기
+          </h2>
+          {pendingCharges.length === 0 ? (
+            <p className="text-text-muted text-sm px-1">충전 대기 건이 없습니다</p>
+          ) : (
+            <div className="space-y-2">
+              {pendingCharges.map((row: {
+                id: string
+                user_id: string
+                amount: number
+                amount_krw: number | null
+                depositor_name: string | null
+                description: string | null
+                created_at: string
+                profiles: { id: string; nickname: string } | null
+              }) => (
+                <div key={row.id} className="card">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-text-primary text-sm">
+                        <span className="text-desire-400">{row.profiles?.nickname ?? '알 수 없음'}</span>
+                        {' · '}
+                        <span className="text-text-secondary">{row.amount}P</span>
+                        {row.amount_krw != null && (
+                          <span className="text-text-muted text-xs ml-1">({row.amount_krw.toLocaleString()}원)</span>
+                        )}
+                      </p>
+                      <p className="text-text-muted text-xs mt-0.5">
+                        입금자명: {row.depositor_name ?? '-'} · {formatDate(row.created_at)}
+                      </p>
+                    </div>
+                  </div>
+                  <AdminChargeActions transactionId={row.id} />
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* 신고 섹션 */}
       {activeSection === 'reports' && (

@@ -15,8 +15,26 @@ function formatTimeAgo(dateString: string): string {
   return `${Math.floor(diffHours / 24)}일 전`
 }
 
+function mergeAndSortByDate(
+  likeNotifications: { id: string; createdAt: string; read: boolean; actorNickname?: string; type?: string }[],
+  systemNotifications: { id: string; createdAt: string; read: boolean; message?: string; type?: string }[]
+): { id: string; createdAt: string; read: boolean; kind: 'like' | 'system'; like?: typeof likeNotifications[0]; system?: typeof systemNotifications[0] }[] {
+  const combined = [
+    ...likeNotifications.map((n) => ({ ...n, kind: 'like' as const, like: n })),
+    ...systemNotifications.map((n) => ({ ...n, kind: 'system' as const, system: n })),
+  ]
+  combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  return combined
+}
+
 export function NotificationBell() {
-  const { likeNotifications, likeUnreadCount, markAllLikesRead } = useNotifications()
+  const {
+    likeNotifications,
+    systemNotifications,
+    totalUnreadCount,
+    markAllLikesRead,
+    markAllSystemRead,
+  } = useNotifications()
   const [open, setOpen] = useState(false)
   const [, startTransition] = useTransition()
   const panelRef = useRef<HTMLDivElement>(null)
@@ -24,10 +42,13 @@ export function NotificationBell() {
   function handleOpen() {
     setOpen((prev) => {
       if (!prev) {
-        const unreadIds = likeNotifications.filter((n) => !n.read).map((n) => n.id)
-        if (unreadIds.length > 0) {
+        const likeUnreadIds = likeNotifications.filter((n) => !n.read).map((n) => n.id)
+        const systemUnreadIds = systemNotifications.filter((n) => !n.read).map((n) => n.id)
+        const allIds = [...likeUnreadIds, ...systemUnreadIds]
+        if (allIds.length > 0) {
           markAllLikesRead()
-          startTransition(() => { markNotificationsRead(unreadIds) })
+          markAllSystemRead()
+          startTransition(() => { markNotificationsRead(allIds) })
         }
       }
       return !prev
@@ -58,11 +79,11 @@ export function NotificationBell() {
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
           <path d="M13.73 21a2 2 0 0 1-3.46 0" />
         </svg>
-        {likeUnreadCount > 0 && (
+        {totalUnreadCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5
                            rounded-full bg-desire-500 text-white text-[10px]
                            font-bold flex items-center justify-center leading-none">
-            {likeUnreadCount > 9 ? '9+' : likeUnreadCount}
+            {totalUnreadCount > 9 ? '9+' : totalUnreadCount}
           </span>
         )}
       </button>
@@ -75,37 +96,50 @@ export function NotificationBell() {
             <p className="text-text-strong text-sm font-semibold">알림</p>
           </div>
 
-          {likeNotifications.length === 0 ? (
+          {likeNotifications.length === 0 && systemNotifications.length === 0 ? (
             <div className="px-4 py-8 text-center">
               <p className="text-text-muted text-sm">아직 알림이 없습니다</p>
             </div>
           ) : (
             <ul className="max-h-80 overflow-y-auto divide-y divide-surface-700/40">
-              {likeNotifications.map((n) => (
+              {mergeAndSortByDate(likeNotifications, systemNotifications).map((item) => (
                 <li
-                  key={n.id}
+                  key={item.id}
                   className={`px-4 py-3 flex flex-col gap-1
-                    ${!n.read ? 'bg-desire-500/5' : ''}`}
+                    ${!item.read ? 'bg-desire-500/5' : ''}`}
                 >
-                  <p className="text-text-primary text-xs leading-relaxed">
-                    <span className="font-medium text-text-strong">{n.actorNickname}</span>
-                    가 좋아요를 눌렀습니다.
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-text-muted text-[11px]">
-                      {formatTimeAgo(n.createdAt)}
-                    </span>
-                    {n.actorId && (
-                      <Link
-                        href={`/profile/${n.actorId}`}
-                        onClick={() => setOpen(false)}
-                        className="text-desire-400 text-[11px] font-medium
-                                   active:opacity-70 transition-opacity"
-                      >
-                        프로필 보러가기
-                      </Link>
-                    )}
-                  </div>
+                  {item.kind === 'like' && item.like ? (
+                    <>
+                      <p className="text-text-primary text-xs leading-relaxed">
+                        <span className="font-medium text-text-strong">{item.like.actorNickname}</span>
+                        가 좋아요를 눌렀습니다.
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-text-muted text-[11px]">
+                          {formatTimeAgo(item.like.createdAt)}
+                        </span>
+                        {item.like.actorId && (
+                          <Link
+                            href={`/profile/${item.like.actorId}`}
+                            onClick={() => setOpen(false)}
+                            className="text-desire-400 text-[11px] font-medium
+                                       active:opacity-70 transition-opacity"
+                          >
+                            프로필 보러가기
+                          </Link>
+                        )}
+                      </div>
+                    </>
+                  ) : item.kind === 'system' && item.system ? (
+                    <>
+                      <p className="text-text-primary text-xs leading-relaxed">
+                        {item.system.message}
+                      </p>
+                      <span className="text-text-muted text-[11px]">
+                        {formatTimeAgo(item.system.createdAt)}
+                      </span>
+                    </>
+                  ) : null}
                 </li>
               ))}
             </ul>

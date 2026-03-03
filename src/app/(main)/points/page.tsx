@@ -84,11 +84,19 @@ function TransactionRow({ tx }: { tx: PointTransaction }) {
   const isCredit = tx.amount > 0
   const amountStr = isCredit ? `+${tx.amount}P` : `${tx.amount}P`
   const amountColor = isCredit ? 'text-trust-400' : 'text-text-secondary'
+  const chargeLabel = tx.type === 'charge' ? chargeStatusLabel(tx.charge_status, tx.rejection_reason) : null
 
   return (
     <div className="card flex items-center justify-between gap-3">
       <div className="min-w-0 flex-1">
-        <p className="text-text-primary text-sm">{tx.description ?? labelFromType(tx.type)}</p>
+        <p className="text-text-primary text-sm">
+          {chargeLabel ?? tx.description ?? labelFromType(tx.type)}
+        </p>
+        {tx.type === 'charge' && tx.charge_status === 'rejected' && tx.rejection_reason && (
+          <p className="text-text-muted text-xs mt-0.5 line-clamp-2" title={tx.rejection_reason}>
+            반려 사유: {tx.rejection_reason}
+          </p>
+        )}
         <p className="text-text-muted text-xs mt-0.5">{formatDate(tx.created_at)}</p>
       </div>
       <div className="flex-shrink-0 text-right">
@@ -105,6 +113,12 @@ function TransactionRow({ tx }: { tx: PointTransaction }) {
       </div>
     </div>
   )
+}
+
+function chargeStatusLabel(chargeStatus: string | null | undefined, rejectionReason: string | null | undefined): string {
+  if (chargeStatus === 'pending') return '충전 대기'
+  if (chargeStatus === 'rejected') return '충전 반려'
+  return '충전 완료'
 }
 
 function labelFromType(type: string): string {

@@ -99,6 +99,14 @@ export interface PointTransaction {
   description: string | null
   policy_code: PolicyCode
   created_at: string
+  /** 입금자명 (type=charge 시) */
+  depositor_name?: string | null
+  /** pending | completed | rejected (type=charge 시) */
+  charge_status?: string | null
+  /** 거절 시 사유 */
+  rejection_reason?: string | null
+  /** 입금 금액(원) (type=charge 시) */
+  amount_krw?: number | null
 }
 
 // API Response Types (api-contracts-v0.1.md 기준)

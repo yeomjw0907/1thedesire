@@ -13,12 +13,13 @@ type Params = {
   age_band?: string | string[]
 }
 
+const AGE_BAND_KEYS = ['20s', '30s', '40s', '50plus'] as const
+const AGE_BAND_SET = new Set<string>(AGE_BAND_KEYS)
+
 function normalizeAgeBands(v: string | string[] | undefined): string[] {
   if (v == null) return []
-  return (Array.isArray(v) ? v : [v]).filter((b) => b && (AGE_BAND_KEYS as readonly string[]).includes(b))
+  return (Array.isArray(v) ? v : [v]).filter((b): b is string => !!b && AGE_BAND_SET.has(b))
 }
-
-const AGE_BAND_KEYS = ['20s', '30s', '40s', '50plus'] as const
 
 const ROLE_OPTIONS = ['Dom', 'Sub', 'Switch'] as const
 

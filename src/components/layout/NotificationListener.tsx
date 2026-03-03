@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useNotifications } from '@/lib/context/NotificationContext'
-import type { LikeNotification } from '@/lib/context/NotificationContext'
+import type { LikeNotification, SystemNotification } from '@/lib/context/NotificationContext'
 import { usePathname } from 'next/navigation'
 
 interface Props {
@@ -12,7 +12,7 @@ interface Props {
 }
 
 export function NotificationListener({ userId }: Props) {
-  const { incrementDm, resetDm, addLikeNotification, setLikeNotifications } = useNotifications()
+  const { incrementDm, resetDm, addLikeNotification, setLikeNotifications, addSystemNotification, setSystemNotifications } = useNotifications()
   const pathname = usePathname()
 
   // DM 탭 진입 시 배지 초기화
@@ -44,6 +44,30 @@ export function NotificationListener({ userId }: Props) {
         setLikeNotifications(list)
       })
   }, [userId, setLikeNotifications])
+
+  // 마운트 시: 충전 완료/거절 알림 초기 로드
+  useEffect(() => {
+    const supabase = createClient()
+    supabase
+      .from('notifications')
+      .select('id, type, message, read, created_at')
+      .eq('user_id', userId)
+      .in('type', ['charge_completed', 'charge_rejected'])
+      .eq('read', false)
+      .order('created_at', { ascending: false })
+      .limit(30)
+      .then(({ data }) => {
+        if (!data) return
+        const list: SystemNotification[] = data.map((n) => ({
+          id: n.id,
+          type: n.type as 'charge_completed' | 'charge_rejected',
+          message: n.message ?? (n.type === 'charge_completed' ? '정상적으로 충전되었습니다.' : '반려되었습니다.'),
+          createdAt: n.created_at,
+          read: n.read,
+        }))
+        setSystemNotifications(list)
+      })
+  }, [userId, setSystemNotifications])
 
   useEffect(() => {
     const supabase = createClient()
@@ -81,9 +105,9 @@ export function NotificationListener({ userId }: Props) {
       )
       .subscribe()
 
-    // 좋아요 알림 실시간 구독
-    const likeChannel = supabase
-      .channel(`like-notifications:${userId}`)
+    // 알림 실시간 구독 (like + charge_completed / charge_rejected)
+    const notifChannel = supabase
+      .channel(`app-notifications:${userId}`)
       .on(
         'postgres_changes',
         {
@@ -95,32 +119,45 @@ export function NotificationListener({ userId }: Props) {
         (payload) => {
           const n = payload.new as {
             id: string
+            type: string
             actor_id: string | null
             actor_nickname: string | null
             post_id: string
+            message: string | null
             created_at: string
           }
 
-          const notification: LikeNotification = {
-            id: n.id,
-            actorId: n.actor_id,
-            actorNickname: n.actor_nickname ?? '누군가',
-            postId: n.post_id,
-            createdAt: n.created_at,
-            read: false,
+          if (n.type === 'like') {
+            const notification: LikeNotification = {
+              id: n.id,
+              actorId: n.actor_id,
+              actorNickname: n.actor_nickname ?? '누군가',
+              postId: n.post_id,
+              createdAt: n.created_at,
+              read: false,
+            }
+            addLikeNotification(notification)
+            toast(`${notification.actorNickname}가 좋아요를 눌렀습니다`, { duration: 4000 })
+          } else if (n.type === 'charge_completed' || n.type === 'charge_rejected') {
+            const msg = n.message ?? (n.type === 'charge_completed' ? '정상적으로 충전되었습니다.' : '반려되었습니다.')
+            addSystemNotification({
+              id: n.id,
+              type: n.type,
+              message: msg,
+              createdAt: n.created_at,
+              read: false,
+            })
+            toast(msg, { duration: 5000 })
           }
-
-          addLikeNotification(notification)
-          toast(`${notification.actorNickname}가 좋아요를 눌렀습니다`, { duration: 4000 })
         }
       )
       .subscribe()
 
     return () => {
       supabase.removeChannel(dmChannel)
-      supabase.removeChannel(likeChannel)
+      supabase.removeChannel(notifChannel)
     }
-  }, [userId, incrementDm, resetDm, addLikeNotification])
+  }, [userId, incrementDm, resetDm, addLikeNotification, addSystemNotification])
 
   return null
 }
