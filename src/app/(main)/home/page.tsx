@@ -1,15 +1,21 @@
+import nextDynamic from 'next/dynamic'
 import Link from 'next/link'
 import { createServerClient } from '@/lib/supabase/server'
-import { ReportSheet } from '@/components/profile/ReportSheet'
 import { HomeDmButton } from '@/components/home/HomeDmButton'
 import { DeletePostButton } from '@/components/post/DeletePostButton'
 import { REGIONS, AGE_BAND_TO_GROUPS } from '@/lib/constants/signup'
-import { HomeAdvancedFilter } from '@/components/home/HomeAdvancedFilter'
 import { PullToRefresh } from '@/components/home/PullToRefresh'
 import { LikeButton } from '@/components/post/LikeButton'
 import { PostImageViewer } from '@/components/post/PostImageViewer'
 import { NotificationBell } from '@/components/layout/NotificationBell'
 import type { Post, Profile, Gender } from '@/types'
+
+const ReportSheet = nextDynamic(
+  () => import('@/components/profile/ReportSheet').then((m) => ({ default: m.ReportSheet }))
+)
+const HomeAdvancedFilter = nextDynamic(
+  () => import('@/components/home/HomeAdvancedFilter').then((m) => ({ default: m.HomeAdvancedFilter }))
+)
 
 /**
  * 홈 피드 화면 - 게시글 메인 피드이자 탐색 허브
@@ -18,6 +24,7 @@ import type { Post, Profile, Gender } from '@/types'
  * 정렬: 최신순 | 최근 가입 [반대 성별] 보기
  * 필터: 전체보기/남성/여성, 성향, 지역, 나이대
  */
+export const dynamic = 'force-dynamic'
 
 export default async function HomePage({
   searchParams,
@@ -36,12 +43,33 @@ export default async function HomePage({
     (b) => b && b in AGE_BAND_TO_GROUPS
   )
 
-  // 현재 사용자 + 내 성별 조회
   const { data: { user } } = await supabase.auth.getUser()
   let myPoints: number | null = null
   let myGender: Gender | null = null
+  let posts: PostWithProfile[] = []
+  let feedError = false
 
-  if (user) {
+  if (user && activeSort === 'latest') {
+    const [myProfileRes, rawPostsRes] = await Promise.all([
+      supabase.from('profiles').select('points, gender').eq('id', user.id).single(),
+      supabase
+        .from('posts')
+        .select(`
+          id, content, image_url, image_url_2, tags, like_count, is_auto_generated, created_at,
+          profiles:user_id (id, nickname, gender, age_group, region, role, withdrawn_at)
+        `)
+        .eq('status', 'published')
+        .order('created_at', { ascending: false })
+        .limit(40),
+    ])
+    myPoints = myProfileRes.data?.points ?? null
+    myGender = (myProfileRes.data?.gender as Gender) ?? null
+    if (rawPostsRes.error) {
+      console.error('[home] posts fetch error:', rawPostsRes.error)
+      feedError = true
+    }
+    posts = (rawPostsRes.data ?? []) as unknown as PostWithProfile[]
+  } else if (user && activeSort === 'new_members') {
     const { data: myProfile } = await supabase
       .from('profiles')
       .select('points, gender')
@@ -49,17 +77,7 @@ export default async function HomePage({
       .single()
     myPoints = myProfile?.points ?? null
     myGender = (myProfile?.gender as Gender) ?? null
-  }
-
-  // 반대 성별 결정 (미로그인 또는 기타이면 female 기본)
-  const oppositeGender: Gender =
-    myGender === 'female' ? 'male' : 'female'
-
-  // ── 정렬 모드별 쿼리 ────────────────────────────────────────
-  let posts: PostWithProfile[] = []
-
-  if (activeSort === 'new_members') {
-    // 최근 가입한 반대 성별 유저 ID 목록 (최대 60명)
+    const oppositeGender: Gender = myGender === 'female' ? 'male' : 'female'
     const { data: recentProfiles } = await supabase
       .from('profiles')
       .select('id')
@@ -67,37 +85,69 @@ export default async function HomePage({
       .eq('account_status', 'active')
       .order('created_at', { ascending: false })
       .limit(60)
-
     const recentIds = (recentProfiles ?? []).map((p) => p.id)
-
     if (recentIds.length > 0) {
-      const { data: rawPosts } = await supabase
+      const rawPostsRes = await supabase
         .from('posts')
         .select(`
-          id, content, image_url, tags, like_count, is_auto_generated, created_at,
-          profiles:user_id (id, nickname, gender, age_group, region, role)
+          id, content, image_url, image_url_2, tags, like_count, is_auto_generated, created_at,
+          profiles:user_id (id, nickname, gender, age_group, region, role, withdrawn_at)
         `)
         .eq('status', 'published')
         .in('user_id', recentIds)
         .order('created_at', { ascending: false })
         .limit(40)
-
-      posts = (rawPosts ?? []) as unknown as PostWithProfile[]
+      if (rawPostsRes.error) {
+        console.error('[home] posts fetch error (new_members):', rawPostsRes.error)
+        feedError = true
+      }
+      posts = (rawPostsRes.data ?? []) as unknown as PostWithProfile[]
     }
-  } else {
-    // 최신순 (기본)
-      const { data: rawPosts } = await supabase
+  } else if (activeSort === 'new_members') {
+    const oppositeGender: Gender = 'female'
+    const { data: recentProfiles } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('gender', oppositeGender)
+      .eq('account_status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(60)
+    const recentIds = (recentProfiles ?? []).map((p) => p.id)
+    if (recentIds.length > 0) {
+      const rawPostsRes = await supabase
         .from('posts')
         .select(`
-        id, content, image_url, tags, like_count, is_auto_generated, created_at,
-        profiles:user_id (id, nickname, gender, age_group, region, role)
+          id, content, image_url, image_url_2, tags, like_count, is_auto_generated, created_at,
+          profiles:user_id (id, nickname, gender, age_group, region, role, withdrawn_at)
+        `)
+        .eq('status', 'published')
+        .in('user_id', recentIds)
+        .order('created_at', { ascending: false })
+        .limit(40)
+      if (rawPostsRes.error) {
+        console.error('[home] posts fetch error (new_members guest):', rawPostsRes.error)
+        feedError = true
+      }
+      posts = (rawPostsRes.data ?? []) as unknown as PostWithProfile[]
+    }
+  } else {
+    const rawPostsRes = await supabase
+      .from('posts')
+      .select(`
+        id, content, image_url, image_url_2, tags, like_count, is_auto_generated, created_at,
+        profiles:user_id (id, nickname, gender, age_group, region, role, withdrawn_at)
       `)
       .eq('status', 'published')
       .order('created_at', { ascending: false })
       .limit(40)
-
-    posts = (rawPosts ?? []) as unknown as PostWithProfile[]
+    if (rawPostsRes.error) {
+      console.error('[home] posts fetch error (latest guest):', rawPostsRes.error)
+      feedError = true
+    }
+    posts = (rawPostsRes.data ?? []) as unknown as PostWithProfile[]
   }
+
+  const oppositeGender: Gender = myGender === 'female' ? 'male' : 'female'
 
   // 앱 레벨 필터 (성별, 성향, 지역, 나이대) — new_members 탭에서도 추가 필터 가능
   if (activeGender) {
@@ -198,7 +248,9 @@ export default async function HomePage({
       {/* 피드 — PullToRefresh가 피드만 감싸서 인디케이터가 헤더 아래에 표시됨 */}
       <PullToRefresh>
         <div className="flex-1 px-4 py-3 space-y-3">
-          {posts.length === 0 ? (
+          {feedError ? (
+            <FeedError />
+          ) : posts.length === 0 ? (
             <EmptyState
               sort={activeSort}
               label={newMembersLabel}
@@ -243,7 +295,7 @@ export default async function HomePage({
 
 type PostWithProfile = Post & {
   like_count?: number
-  profiles: Pick<Profile, 'id' | 'nickname' | 'gender' | 'age_group' | 'region' | 'role'> | null
+  profiles: Pick<Profile, 'id' | 'nickname' | 'gender' | 'age_group' | 'region' | 'role' | 'withdrawn_at'> | null
 }
 
 // ─────────────────────────────────────────────
@@ -313,13 +365,13 @@ function PostCard({
   likedByMe: boolean
 }) {
   const profile = post.profiles
+  const displayNickname = profile?.withdrawn_at ? '탈퇴한 사용자' : (profile?.nickname ?? '알 수 없음')
   const timeAgo = formatTimeAgo(post.created_at)
   const tags = post.tags
     ? post.tags.split(/[,·\s·]+/).map((t) => t.trim()).filter(Boolean).slice(0, 3)
     : []
   const isSelf = userId && profile?.id === userId
   const showDmButton = !isSelf && profile && myPoints !== null
-
 
   return (
     <article className="card relative">
@@ -332,14 +384,14 @@ function PostCard({
           {/* 아바타 */}
           <div className="w-10 h-10 rounded-full bg-surface-700 flex items-center justify-center
                           flex-shrink-0 text-text-secondary text-sm font-semibold">
-            {profile?.nickname?.[0] ?? '?'}
+            {displayNickname[0] ?? '?'}
           </div>
 
           <div className="min-w-0">
             {/* 닉네임 · 성별 */}
             <div className="flex items-center gap-1.5">
               <span className="text-text-strong font-semibold text-[14px] leading-tight">
-                {profile?.nickname}
+                {displayNickname}
               </span>
               {profile?.gender && (
                 <span className="text-text-muted text-[11px]">
@@ -366,9 +418,9 @@ function PostCard({
         {post.content}
       </p>
 
-      {/* 이미지 — 클릭하면 전체화면 */}
+      {/* 이미지 — 클릭하면 전체화면, 2장이면 좌우 분할 */}
       {post.image_url && (
-        <PostImageViewer src={post.image_url} />
+        <PostImageViewer src={post.image_url} src2={post.image_url_2} />
       )}
 
       {/* 하단: 태그 + 액션 (구분선 없이 여백으로 분리) */}
@@ -396,7 +448,7 @@ function PostCard({
           {showDmButton && (
             <HomeDmButton
               targetUserId={profile.id}
-              targetNickname={profile.nickname}
+              targetNickname={displayNickname}
               targetAgeGroup={profile.age_group ?? ''}
               targetRegion={profile.region ?? ''}
               targetRole={profile.role ?? null}
@@ -404,11 +456,24 @@ function PostCard({
             />
           )}
           {profile && (
-            <ReportSheet targetUserId={profile.id} targetNickname={profile.nickname} />
+            <ReportSheet targetUserId={profile.id} targetNickname={displayNickname} />
           )}
         </div>
       </div>
     </article>
+  )
+}
+
+function FeedError() {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <p className="text-text-muted text-base mb-2">
+        글을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
+      </p>
+      <p className="text-text-muted text-sm">
+        <Link href="/home" className="underline underline-offset-2">새로고침</Link>
+      </p>
+    </div>
   )
 }
 

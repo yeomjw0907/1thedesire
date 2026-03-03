@@ -28,8 +28,8 @@ export default async function ChatRoomPage({
       initiator_id,
       receiver_id,
       request_expires_at,
-      initiator:initiator_id (id, nickname, age_group, region),
-      receiver:receiver_id (id, nickname, age_group, region)
+      initiator:initiator_id (id, nickname, age_group, region, withdrawn_at),
+      receiver:receiver_id (id, nickname, age_group, region, withdrawn_at)
     `)
     .eq('id', roomId)
     .single()
@@ -39,31 +39,34 @@ export default async function ChatRoomPage({
   const isParticipant = room.initiator_id === user.id || room.receiver_id === user.id
   if (!isParticipant) redirect('/dm')
 
-  // consent_event: request_viewed 기록 (receiver가 처음 볼 때)
-  if (room.receiver_id === user.id && room.status === 'pending') {
-    await supabase.from('consent_events').upsert(
-      {
-        room_id: roomId,
-        actor_id: user.id,
-        event_type: 'request_viewed',
-        metadata: {},
-      },
-      { onConflict: 'room_id,actor_id,event_type' }
-    )
-  }
+  const consentPromise =
+    room.receiver_id === user.id && room.status === 'pending'
+      ? supabase.from('consent_events').upsert(
+          {
+            room_id: roomId,
+            actor_id: user.id,
+            event_type: 'request_viewed',
+            metadata: {},
+          },
+          { onConflict: 'room_id,actor_id,event_type' }
+        )
+      : Promise.resolve({ data: null, error: null })
 
-  const { data: messages } = await supabase
+  const messagesPromise = supabase
     .from('messages')
     .select('id, sender_id, content, message_type, message_status, created_at')
     .eq('room_id', roomId)
     .order('created_at', { ascending: true })
     .limit(200)
 
-  const initiator = room.initiator as unknown as { id: string; nickname: string } | null
-  const receiver = room.receiver as unknown as { id: string; nickname: string } | null
+  const [, messagesRes] = await Promise.all([consentPromise, messagesPromise])
+  const messages = messagesRes.data
+
+  const initiator = room.initiator as unknown as { id: string; nickname: string | null; withdrawn_at?: string | null } | null
+  const receiver = room.receiver as unknown as { id: string; nickname: string | null; withdrawn_at?: string | null } | null
   const isSender = room.initiator_id === user.id
   const otherProfile = isSender ? receiver : initiator
-  const otherNickname = otherProfile?.nickname ?? '알 수 없음'
+  const otherNickname = otherProfile?.withdrawn_at ? '탈퇴한 사용자' : (otherProfile?.nickname ?? '알 수 없음')
 
   return (
     <div className="flex flex-col h-screen">

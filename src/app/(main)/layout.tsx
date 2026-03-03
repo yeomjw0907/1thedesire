@@ -1,7 +1,11 @@
+import dynamic from 'next/dynamic'
 import { BottomNav } from '@/components/layout/BottomNav'
 import { NotificationProvider } from '@/lib/context/NotificationContext'
-import { NotificationListener } from '@/components/layout/NotificationListener'
 import { createServerClient } from '@/lib/supabase/server'
+
+const NotificationListener = dynamic(
+  () => import('@/components/layout/NotificationListener').then((m) => ({ default: m.NotificationListener }))
+)
 
 /**
  * 메인 앱 레이아웃

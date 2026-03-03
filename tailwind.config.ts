@@ -14,10 +14,14 @@ const config: Config = {
           900: '#0B0B0D',
           850: '#111114',
         },
+        border: {
+          primary: '#25252C',
+        },
         surface: {
           800: '#17171B',
           750: '#1D1D22',
           700: '#25252C',
+          600: '#2E2E36',
         },
         // Accent - Desire Red
         desire: {

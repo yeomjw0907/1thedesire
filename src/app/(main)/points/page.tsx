@@ -13,18 +13,21 @@ export default async function PointsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('points')
-    .eq('id', user.id)
-    .single()
-
-  const { data: transactions } = await supabase
-    .from('point_transactions')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(50)
+  const [profileRes, transactionsRes] = await Promise.all([
+    supabase.from('profiles').select('points').eq('id', user.id).single(),
+    supabase
+      .from('point_transactions')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(50),
+  ])
+  if (profileRes.error) {
+    console.error('[points] profile fetch error:', profileRes.error)
+  }
+  const profile = profileRes.data
+  const transactions = transactionsRes.data ?? []
+  const profileLoadError = !!profileRes.error
 
   return (
     <div className="flex flex-col min-h-full pb-24">
@@ -34,6 +37,9 @@ export default async function PointsPage() {
           포인트
         </h1>
 
+        {profileLoadError && (
+          <p className="text-state-danger text-sm mb-3">포인트 정보를 불러오지 못했습니다.</p>
+        )}
         {/* 잔액 카드 */}
         <div className="bg-surface-800 rounded-card p-5 border border-surface-700/50">
           <p className="text-text-muted text-xs mb-2">보유 포인트</p>

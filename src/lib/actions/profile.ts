@@ -2,8 +2,41 @@
 
 import { redirect } from 'next/navigation'
 import { createServerClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { REGIONS } from '@/lib/constants/signup'
 import type { ApiResponse } from '@/types'
+
+export async function withdrawAccount(): Promise<ApiResponse> {
+  const supabase = await createServerClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return { success: false, data: null, error: { code: 'UNAUTHORIZED', message: '로그인이 필요합니다' } }
+  }
+
+  const { error: updateError } = await supabase
+    .from('profiles')
+    .update({
+      nickname: null,
+      bio: null,
+      avatar_url: null,
+      role: null,
+      withdrawn_at: new Date().toISOString(),
+    })
+    .eq('id', user.id)
+
+  if (updateError) {
+    return { success: false, data: null, error: { code: 'DB_ERROR', message: '탈퇴 처리에 실패했습니다' } }
+  }
+
+  try {
+    const admin = createAdminClient()
+    await admin.auth.admin.deleteUser(user.id)
+  } catch {
+    // 이미 삭제된 사용자 등은 무시하고 redirect
+  }
+
+  redirect('/login')
+}
 
 export async function updateProfile(
   _prev: ApiResponse | null,

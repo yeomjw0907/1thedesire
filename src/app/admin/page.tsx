@@ -40,41 +40,21 @@ export default async function AdminPage({
 
   const admin = createAdminClient()
 
-  // DM 상태 통계
-  const { data: roomStats } = await admin.from('chat_rooms').select('status')
+  const [roomStatsRes, reportsRes, recentUsersRes, recentPostsRes] = await Promise.all([
+    admin.from('chat_rooms').select('status'),
+    admin.from('reports').select('id, reason, status, created_at, reporter:reporter_id (id, nickname), target:target_user_id (id, nickname, account_status, points)').order('created_at', { ascending: false }).limit(30),
+    admin.from('profiles').select('id, nickname, gender, created_at, account_status, points').order('created_at', { ascending: false }).limit(30),
+    admin.from('posts').select('id, content, status, created_at, profiles:user_id (id, nickname)').in('status', ['published', 'hidden']).order('created_at', { ascending: false }).limit(30),
+  ])
+
+  const roomStats = roomStatsRes.data
   const statCounts: Record<string, number> = {}
   for (const r of roomStats ?? []) {
     statCounts[r.status] = (statCounts[r.status] ?? 0) + 1
   }
-
-  // 신고 목록 (미처리 우선)
-  const { data: reports } = await admin
-    .from('reports')
-    .select(`
-      id, reason, status, created_at,
-      reporter:reporter_id (id, nickname),
-      target:target_user_id (id, nickname, account_status, points)
-    `)
-    .order('created_at', { ascending: false })
-    .limit(30)
-
-  // 최근 가입자
-  const { data: recentUsers } = await admin
-    .from('profiles')
-    .select('id, nickname, gender, created_at, account_status, points')
-    .order('created_at', { ascending: false })
-    .limit(30)
-
-  // 최근 게시글 (숨김 포함)
-  const { data: recentPosts } = await admin
-    .from('posts')
-    .select(`
-      id, content, status, created_at,
-      profiles:user_id (id, nickname)
-    `)
-    .in('status', ['published', 'hidden'])
-    .order('created_at', { ascending: false })
-    .limit(30)
+  const reports = reportsRes.data
+  const recentUsers = recentUsersRes.data
+  const recentPosts = recentPostsRes.data
 
   return (
     <div className="min-h-screen bg-bg-900 px-4 py-6 pb-10">

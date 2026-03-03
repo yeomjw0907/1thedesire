@@ -346,21 +346,14 @@ export async function openStiSubmissionForReview(
     })
   }
 
-  // badge 조회
-  const { data: badge } = await admin
-    .from('sti_check_badges')
-    .select('*')
-    .eq('user_id', submission.user_id)
-    .single()
-
-  // signed URL 발급 (파일이 있는 경우)
-  let signedUrl: string | null = null
-  if (submission.file_path) {
-    const { data: urlData } = await admin.storage
-      .from('sti-verification-private')
-      .createSignedUrl(submission.file_path, 300) // 5분
-    signedUrl = urlData?.signedUrl ?? null
-  }
+  const [badgeRes, urlRes] = await Promise.all([
+    admin.from('sti_check_badges').select('*').eq('user_id', submission.user_id).single(),
+    submission.file_path
+      ? admin.storage.from('sti-verification-private').createSignedUrl(submission.file_path, 300)
+      : Promise.resolve({ data: { signedUrl: null } }),
+  ])
+  const badge = badgeRes.data
+  const signedUrl = urlRes.data?.signedUrl ?? null
 
   return {
     success: true,

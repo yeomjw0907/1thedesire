@@ -61,40 +61,39 @@ export default async function AdminStiPage({
 
   const admin = createAdminClient()
 
-  // 통계
-  const { data: allSubs } = await admin
-    .from('sti_check_submissions')
-    .select('status')
-
-  const counts: Record<string, number> = {}
-  for (const sub of allSubs ?? []) {
-    counts[sub.status] = (counts[sub.status] ?? 0) + 1
-  }
-
-  // 제출 목록
-  let query = admin
-    .from('sti_check_submissions')
-    .select('*')
-    .order('submitted_at', { ascending: true })
-
-  if (activeFilter === 'active') {
-    query = query.in('status', ['pending', 'under_review'])
-  } else {
-    query = query.eq('status', activeFilter)
-  }
-
-  const { data: submissions } = await query.limit(50)
-
-  // 만료 예정 배지 (7일 이내)
   const soonDate = new Date()
   soonDate.setDate(soonDate.getDate() + 7)
-  const { data: expiringSoon } = await admin
+  const expiringQuery = admin
     .from('sti_check_badges')
     .select('user_id, expires_at, is_public')
     .eq('verification_status', 'verified')
     .lte('expires_at', soonDate.toISOString())
     .gte('expires_at', new Date().toISOString())
     .order('expires_at')
+
+  let listQuery = admin
+    .from('sti_check_submissions')
+    .select('*')
+    .order('submitted_at', { ascending: true })
+  if (activeFilter === 'active') {
+    listQuery = listQuery.in('status', ['pending', 'under_review'])
+  } else {
+    listQuery = listQuery.eq('status', activeFilter)
+  }
+
+  const [allSubsRes, submissionsRes, expiringSoonRes] = await Promise.all([
+    admin.from('sti_check_submissions').select('status'),
+    listQuery.limit(50),
+    expiringQuery,
+  ])
+
+  const allSubs = allSubsRes.data
+  const counts: Record<string, number> = {}
+  for (const sub of allSubs ?? []) {
+    counts[sub.status] = (counts[sub.status] ?? 0) + 1
+  }
+  const submissions = submissionsRes.data
+  const expiringSoon = expiringSoonRes.data
 
   return (
     <div className="min-h-screen bg-bg-900 px-4 py-6 pb-10">

@@ -15,7 +15,7 @@ type Params = {
 
 function normalizeAgeBands(v: string | string[] | undefined): string[] {
   if (v == null) return []
-  return (Array.isArray(v) ? v : [v]).filter((b) => b && AGE_BAND_KEYS.includes(b))
+  return (Array.isArray(v) ? v : [v]).filter((b) => b && (AGE_BAND_KEYS as readonly string[]).includes(b))
 }
 
 const AGE_BAND_KEYS = ['20s', '30s', '40s', '50plus'] as const

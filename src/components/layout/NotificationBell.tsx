@@ -27,7 +27,7 @@ export function NotificationBell() {
         const unreadIds = likeNotifications.filter((n) => !n.read).map((n) => n.id)
         if (unreadIds.length > 0) {
           markAllLikesRead()
-          startTransition(() => markNotificationsRead(unreadIds))
+          startTransition(() => { markNotificationsRead(unreadIds) })
         }
       }
       return !prev

@@ -72,6 +72,7 @@ export interface Profile {
   blocked_count: number
   created_at: string
   updated_at: string
+  withdrawn_at: string | null
 }
 
 export interface Post {
@@ -79,6 +80,7 @@ export interface Post {
   user_id: string
   content: string
   image_url: string | null
+  image_url_2: string | null
   tags: string | null
   is_auto_generated: boolean
   status: PostStatus

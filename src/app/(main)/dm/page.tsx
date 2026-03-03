@@ -36,8 +36,8 @@ export default async function DmListPage({
       receiver_id,
       request_expires_at,
       created_at,
-      initiator:initiator_id (id, nickname, age_group, region),
-      receiver:receiver_id (id, nickname, age_group, region)
+      initiator:initiator_id (id, nickname, age_group, region, withdrawn_at),
+      receiver:receiver_id (id, nickname, age_group, region, withdrawn_at)
     `)
     .or(`initiator_id.eq.${user.id},receiver_id.eq.${user.id}`)
     .order('created_at', { ascending: false })
@@ -106,6 +106,7 @@ export default async function DmListPage({
             const receiver = room.receiver as UserStub | null
             const isSender = initiator?.id === user.id
             const other = isSender ? receiver : initiator
+            const displayNickname = other?.withdrawn_at ? '탈퇴한 사용자' : (other?.nickname ?? '알 수 없음')
 
             return (
               <Link key={room.id} href={`/dm/${room.id}`} className="block">
@@ -115,11 +116,11 @@ export default async function DmListPage({
                       {/* 아바타 */}
                       <div className="w-9 h-9 rounded-full bg-surface-700 flex items-center justify-center
                                       flex-shrink-0 text-text-muted text-sm font-medium">
-                        {other?.nickname?.[0] ?? '?'}
+                        {displayNickname[0] ?? '?'}
                       </div>
                       <div className="min-w-0">
                         <p className="text-text-strong font-medium text-sm">
-                          {other?.nickname ?? '알 수 없음'}
+                          {displayNickname}
                         </p>
                         <p className="text-text-muted text-xs mt-0.5">
                           {other?.age_group} · {other?.region}
@@ -158,7 +159,7 @@ export default async function DmListPage({
 // Types
 // ─────────────────────────────────────────────
 
-type UserStub = { id: string; nickname: string; age_group: string; region: string }
+type UserStub = { id: string; nickname: string | null; age_group: string; region: string; withdrawn_at?: string | null }
 type ChatRoom = {
   id: string
   status: string

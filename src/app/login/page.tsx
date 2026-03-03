@@ -1,11 +1,15 @@
 import fs from 'fs'
 import path from 'path'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { EmailLoginBlock } from '@/components/auth/EmailLoginBlock'
 import { GoogleLoginButton } from '@/components/auth/GoogleLoginButton'
 import { SignupSection } from '@/components/auth/SignupSection'
 import { TwitterLoginButton } from '@/components/auth/TwitterLoginButton'
-import { LegalModal } from '@/components/legal/LegalModal'
+
+const LegalModal = dynamic(
+  () => import('@/components/legal/LegalModal').then((m) => ({ default: m.LegalModal }))
+)
 
 /**
  * 로그인 화면

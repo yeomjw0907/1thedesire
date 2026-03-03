@@ -19,29 +19,32 @@ export default async function ProfileDetailPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', id)
-    .single()
+  const [profileRes, postsRes, stiBadgeRes] = await Promise.all([
+    supabase.from('profiles').select('*').eq('id', id).single(),
+    supabase
+      .from('posts')
+      .select('id, content, image_url, image_url_2, tags, created_at')
+      .eq('user_id', id)
+      .eq('status', 'published')
+      .order('created_at', { ascending: false })
+      .limit(5),
+    supabase
+      .from('public_sti_badges')
+      .select('user_id, test_date, expires_at, verified_at')
+      .eq('user_id', id)
+      .maybeSingle(),
+  ])
 
+  const { data: profile, error } = profileRes
   if (error || !profile) notFound()
-
-  const { data: posts } = await supabase
-    .from('posts')
-    .select('id, content, image_url, tags, created_at')
-    .eq('user_id', id)
-    .eq('status', 'published')
-    .order('created_at', { ascending: false })
-    .limit(5)
+  const posts = postsRes.data ?? null
+  const publicStiBadge = stiBadgeRes.data as PublicStiBadge | null
 
   const isSelf = user.id === id
-
   let isBlocked = false
   let myPoints = 0
-
   if (!isSelf) {
-    const [{ data: block }, { data: myProfile }] = await Promise.all([
+    const [blockRes, myProfileRes] = await Promise.all([
       supabase
         .from('blocks')
         .select('id')
@@ -50,22 +53,16 @@ export default async function ProfileDetailPage({
         .maybeSingle(),
       supabase.from('profiles').select('points').eq('id', user.id).single(),
     ])
-    isBlocked = !!block
-    myPoints = myProfile?.points ?? 0
+    isBlocked = !!blockRes.data
+    myPoints = myProfileRes.data?.points ?? 0
   }
-
-  const { data: stiBadgeRow } = await supabase
-    .from('public_sti_badges')
-    .select('user_id, test_date, expires_at, verified_at')
-    .eq('user_id', id)
-    .maybeSingle()
-
-  const publicStiBadge = stiBadgeRow as PublicStiBadge | null
 
   // 성향 태그 파싱
   const roleTags = profile.role
-    ? profile.role.split(/[,·\s·]+/).map((t: string) => t.trim()).filter(Boolean)
+    ? profile.role.split(/\s*·\s*/).map((t: string) => t.trim()).filter(Boolean)
     : []
+
+  const displayNickname = profile.withdrawn_at ? '탈퇴한 사용자' : (profile.nickname ?? '알 수 없음')
 
   return (
     <div className="flex flex-col min-h-full pb-36">
@@ -84,8 +81,8 @@ export default async function ProfileDetailPage({
         </Link>
         {!isSelf && (
           <div className="flex items-center gap-1">
-            <ReportSheet targetUserId={id} targetNickname={profile.nickname} />
-            <BlockSheet targetUserId={id} targetNickname={profile.nickname} isBlocked={isBlocked} />
+            <ReportSheet targetUserId={id} targetNickname={displayNickname} />
+            <BlockSheet targetUserId={id} targetNickname={displayNickname} isBlocked={isBlocked} />
           </div>
         )}
       </header>
@@ -98,16 +95,16 @@ export default async function ProfileDetailPage({
                         text-3xl font-bold text-text-muted mb-4 flex-shrink-0">
           {profile.avatar_url ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={profile.avatar_url} alt={profile.nickname} className="w-full h-full object-cover" />
+            <img src={profile.avatar_url} alt={displayNickname} className="w-full h-full object-cover" />
           ) : (
-            <span>{profile.nickname?.[0] ?? '?'}</span>
+            <span>{displayNickname[0] ?? '?'}</span>
           )}
         </div>
 
         {/* 닉네임 */}
         <div className="flex items-center gap-2 mb-1.5">
           <h1 className="text-text-strong text-2xl font-bold tracking-tight">
-            {profile.nickname}
+            {displayNickname}
           </h1>
           {isSelf && (
             <Link
@@ -120,13 +117,9 @@ export default async function ProfileDetailPage({
           )}
         </div>
 
-        {/* 나이 · 지역 · 성별 */}
-        <p className="text-text-secondary text-sm mb-1">
+        <p className="text-text-muted text-sm mb-4">
           {profile.age_group} · {profile.region} · {genderLabel(profile.gender)}
-        </p>
-
-        {/* 가입일 */}
-        <p className="text-text-muted text-[11px] mb-4">
+          <span className="text-surface-600 mx-1.5">·</span>
           {new Date(profile.created_at).toLocaleDateString('ko-KR', {
             year: 'numeric', month: 'long', day: 'numeric',
           })} 가입
@@ -204,12 +197,12 @@ export default async function ProfileDetailPage({
           <div className="space-y-2.5">
             {posts.map((post) => {
               const postTags: string[] = post.tags
-                ? (post.tags as string).split(/[,·\s·]+/).map((t: string) => t.trim()).filter(Boolean)
+                ? (post.tags as string).split(/\s*·\s*/).map((t: string) => t.trim()).filter(Boolean)
                 : []
               return (
                 <div key={post.id} className="bg-surface-800 rounded-2xl p-4">
                   {post.image_url && (
-                    <PostImageViewer src={post.image_url} />
+                    <PostImageViewer src={post.image_url} src2={post.image_url_2} />
                   )}
                   <p className="text-text-primary text-[14px] leading-[1.75] line-clamp-4 whitespace-pre-wrap">
                     {post.content}

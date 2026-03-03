@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Toaster } from 'sonner'
+import { FontLoader } from '@/components/FontLoader'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -33,6 +34,8 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body className="bg-bg-900 text-text-primary antialiased">
+        <FontLoader />
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" />
         <div className="mx-auto max-w-md min-h-screen relative">
           {children}
         </div>

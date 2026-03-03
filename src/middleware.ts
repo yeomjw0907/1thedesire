@@ -87,11 +87,10 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse
   }
 
-  // 그 외 메인 페이지 접근 시 프로필 존재 여부 확인
-  // 프로필이 없으면 가입 페이지로
+  // 그 외 메인 페이지 접근 시 프로필 존재 여부 및 account_status 확인
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id')
+    .select('id, account_status')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -101,11 +100,17 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  if (profile.account_status !== 'active') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url)
+  }
+
   return supabaseResponse
 }
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|manifest\\.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml)$).*)',
   ],
 }

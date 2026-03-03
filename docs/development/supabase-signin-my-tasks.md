@@ -199,3 +199,5 @@ https://<PROJECT_REF>.supabase.co/auth/v1/callback
 - **환경 변수**: 앱 쪽 `.env.local` 에 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` 가 이미 있으면 Supabase 설정만으로 로그인 연동 가능합니다.
 
 더 자세한 설명은 같은 폴더의 `social-login-setup.md` 를 참고하면 됩니다.
+
+**마이그레이션 확인**: 배포 전 로컬·원격 마이그레이션 동기화는 [supabase-migrations.md](./supabase-migrations.md)를 참고하세요.
