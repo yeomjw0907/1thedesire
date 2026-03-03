@@ -13,7 +13,6 @@ export function RefreshButton() {
     startTransition(() => {
       router.refresh()
     })
-    // 최소 0.6s 이상 돌게 보장 (너무 빠른 새로고침도 피드백이 보이도록)
     setTimeout(() => setSpinning(false), 700)
   }
 

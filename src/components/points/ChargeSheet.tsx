@@ -15,7 +15,7 @@ const BANK_INFO = {
   holder: '주식회사 98점7도',
 }
 
-const SUPPORT_EMAIL = 'tweetyhelpservice@gmail.com'
+const SUPPORT_EMAIL = 'yeomjw0907@onecation.co.kr'
 
 type Step = 'select' | 'confirm'
 
@@ -125,7 +125,6 @@ export function ChargeSheet() {
                     <p>· 소액 충전 권장 — 처음 이용 시 100P~300P로 테스트해 보세요</p>
                     <p>· 입금자명은 서비스 닉네임으로 정확히 입력하세요. 공백·특수문자 포함 시 자동 처리 불가</p>
                     <p>· 입금자명 제한: 10자 이내, 영문·한글·숫자만 허용</p>
-                    <p>· 오류 시 문의: <span className="text-text-secondary">{SUPPORT_EMAIL}</span></p>
                     <p>· 포인트는 새로운 DM 요청에만 사용됩니다. 수락 후 대화는 무료</p>
                     <p>· 중요한 대화 내용은 별도 보관하세요. 일정 기간 후 자동 삭제될 수 있습니다</p>
                     <p>· 환불 및 이용 정책은 서비스 약관을 참고해 주세요</p>

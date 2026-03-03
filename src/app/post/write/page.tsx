@@ -7,7 +7,7 @@ import type { ApiResponse } from '@/types'
 
 const MAX_CHARS = 300
 const TAGS_SEP = ' · '
-const POST_TAG_OPTIONS = ['인사말', 'FWB', '감성 연애', '대화 위주', '만남 위주'] as const
+const POST_TAG_OPTIONS = ['FWB', '감성 연애', '대화 위주', '만남 위주'] as const
 
 export default function WritePostPage() {
   const [state, action, isPending] = useActionState<ApiResponse | null, FormData>(
@@ -55,7 +55,7 @@ export default function WritePostPage() {
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </Link>
-        <span className="text-text-strong text-base font-medium">분위기 남기기</span>
+        <span className="text-text-strong text-base font-medium">글 작성하기</span>
         <button
           form="write-form"
           type="submit"
@@ -82,7 +82,7 @@ export default function WritePostPage() {
             name="content"
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="대화를 시작하기 전에 보여주고 싶은 분위기를 적어보세요"
+            placeholder="어떤 글을 작성하실건가요?"
             maxLength={MAX_CHARS}
             rows={10}
             className="w-full bg-transparent text-text-primary placeholder-text-muted
@@ -168,6 +168,35 @@ export default function WritePostPage() {
           }`}>
             {content.length} / {MAX_CHARS}
           </span>
+        </div>
+
+        {/* 게시글 작성 안내 */}
+        <div className="px-5 pb-8 pt-2 space-y-3">
+          <p className="text-text-muted text-[11px] font-semibold tracking-wide">게시글 작성 안내</p>
+          <div className="space-y-1.5">
+            <p className="text-text-muted text-[11px] font-medium">※ 불법촬영물 유통 금지</p>
+            <p className="text-text-muted text-[11px] leading-relaxed">
+              불법촬영물등을 게재할 경우 전기통신사업법에 따라 서비스 이용이 영구적으로 제한될 수 있으며 관련 법률에 따라 처벌됩니다.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <p className="text-text-muted text-[11px] font-medium">※ 청소년 대상 범법행위 금지</p>
+            <p className="text-text-muted text-[11px] leading-relaxed">
+              청소년에 대한 착취, 성범죄, 자살 방조·동조, 약물 권유 등 각종 유해한 내용을 작성할 경우 관련 법률에 따라 처벌됩니다.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <p className="text-text-muted text-[11px] font-medium">※ 음란물 유포 금지</p>
+            <p className="text-text-muted text-[11px] leading-relaxed">
+              이곳은 공개 게시판으로, 음란물을 게시할 경우 통신매체이용음란죄로 처벌받을 수 있습니다.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <p className="text-text-muted text-[11px] font-medium">※ 기타 방통위 심의규정을 벗어난 게시글 금지</p>
+            <p className="text-text-muted text-[11px] leading-relaxed">
+              욕망백서는 방송통신위원회의 심의규정을 준수합니다. 이를 어기는 미디어를 게시할 경우 이용이 제한됩니다.
+            </p>
+          </div>
         </div>
       </form>
     </div>

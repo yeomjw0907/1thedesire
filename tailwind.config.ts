@@ -53,6 +53,16 @@ const config: Config = {
         card: '20px',
         chip: '999px',
       },
+      keyframes: {
+        'nav-loading': {
+          '0%': { transform: 'translateX(-100%)' },
+          '60%': { transform: 'translateX(0%)' },
+          '100%': { transform: 'translateX(100%)' },
+        },
+      },
+      animation: {
+        'nav-loading': 'nav-loading 1.2s ease-in-out infinite',
+      },
     },
   },
   plugins: [],

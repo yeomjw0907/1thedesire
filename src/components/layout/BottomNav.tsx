@@ -1,7 +1,8 @@
 'use client'
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useNotifications } from '@/lib/context/NotificationContext'
 
 /**
  * 하단 탭 바
@@ -18,25 +19,60 @@ const NAV_ITEMS = [
 
 export function BottomNav() {
   const pathname = usePathname()
+  const router = useRouter()
+  const [pendingHref, setPendingHref] = useState<string | null>(null)
+  const { dmCount, resetDm } = useNotifications()
+
+  useEffect(() => {
+    setPendingHref(null)
+  }, [pathname])
+
+  function handleNav(href: string) {
+    if (pathname === href || pathname.startsWith(`${href}/`)) return
+    setPendingHref(href)
+    if (href === '/dm') resetDm()
+    router.push(href)
+  }
 
   return (
     <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md
                     bg-bg-850 border-t border-surface-700
                     safe-area-pb">
+      {/* 상단 로딩 바 */}
+      {pendingHref && (
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-surface-700 overflow-hidden">
+          <div className="h-full bg-desire-500 animate-nav-loading" />
+        </div>
+      )}
       <div className="flex items-center justify-around py-2">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
           const isActive = pathname === href || pathname.startsWith(`${href}/`)
+          const isLoading = pendingHref === href
+          const showDmBadge = href === '/dm' && dmCount > 0
           return (
-            <Link
+            <button
               key={href}
-              href={href}
+              onClick={() => handleNav(href)}
               className={`flex flex-col items-center gap-1 px-3 py-1.5
                          transition-colors duration-150
                          ${isActive ? 'text-desire-400' : 'text-text-muted'}`}
             >
-              <Icon active={isActive} />
+              <div className="relative">
+                <Icon active={isActive || isLoading} />
+                {isLoading && (
+                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-desire-400
+                                   animate-pulse" />
+                )}
+                {showDmBadge && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] px-0.5
+                                   rounded-full bg-desire-500 text-white text-[9px] font-bold
+                                   flex items-center justify-center leading-none">
+                    {dmCount > 9 ? '9+' : dmCount}
+                  </span>
+                )}
+              </div>
               <span className="text-[10px] font-medium">{label}</span>
-            </Link>
+            </button>
           )
         })}
       </div>

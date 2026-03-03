@@ -5,6 +5,7 @@ import { DmRequestSheet } from '@/components/profile/DmRequestSheet'
 import { ReportSheet } from '@/components/profile/ReportSheet'
 import { BlockSheet } from '@/components/profile/BlockSheet'
 import { StiVerificationBadge } from '@/components/sti/StiVerificationBadge'
+import { PostImageViewer } from '@/components/post/PostImageViewer'
 import type { PublicStiBadge } from '@/types/sti'
 
 export default async function ProfileDetailPage({
@@ -68,6 +69,7 @@ export default async function ProfileDetailPage({
 
   return (
     <div className="flex flex-col min-h-full pb-36">
+
       {/* 상단 바 */}
       <header className="sticky top-0 z-10 flex items-center justify-between
                          px-2 py-2 bg-bg-900/95 backdrop-blur-sm border-b border-surface-700/30">
@@ -80,157 +82,160 @@ export default async function ProfileDetailPage({
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </Link>
-
         {!isSelf && (
           <div className="flex items-center gap-1">
             <ReportSheet targetUserId={id} targetNickname={profile.nickname} />
             <BlockSheet targetUserId={id} targetNickname={profile.nickname} isBlocked={isBlocked} />
           </div>
         )}
-        {/* 편집 버튼은 닉네임 옆으로 이동 */}
       </header>
 
-      {/* 프로필 헤더 - 아바타 + 기본 정보 */}
-      <section className="px-6 pt-6 pb-5 border-b border-surface-700/40">
-        <div className="flex items-start gap-4 mb-4">
-          {/* 아바타 */}
-          <div className="w-16 h-16 rounded-full bg-surface-700 flex items-center justify-center
-                          flex-shrink-0 text-2xl font-semibold text-text-muted border border-surface-600 overflow-hidden">
-            {profile.avatar_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={profile.avatar_url} alt={profile.nickname} className="w-full h-full object-cover" />
-            ) : (
-              <span>{profile.nickname?.[0] ?? '?'}</span>
-            )}
-          </div>
-          <div className="min-w-0 flex-1 pt-1">
-            <div className="flex items-baseline justify-between mb-1">
-              <h1 className="text-text-strong text-[22px] font-semibold leading-tight">
-                {profile.nickname}
-              </h1>
-              {isSelf && (
-                <Link
-                  href="/profile/edit"
-                  className="text-text-muted text-sm active:text-text-secondary transition-colors flex-shrink-0"
-                >
-                  편집
-                </Link>
-              )}
-            </div>
-            <p className="text-text-secondary text-sm">
-              {profile.age_group} · {profile.region} · {genderLabel(profile.gender)}
-            </p>
-          </div>
+      {/* ── Hero ── */}
+      <section className="flex flex-col items-center text-center px-6 pt-10 pb-7">
+        {/* 아바타 */}
+        <div className="w-24 h-24 rounded-full bg-surface-700 border-2 border-surface-600
+                        flex items-center justify-center overflow-hidden
+                        text-3xl font-bold text-text-muted mb-4 flex-shrink-0">
+          {profile.avatar_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={profile.avatar_url} alt={profile.nickname} className="w-full h-full object-cover" />
+          ) : (
+            <span>{profile.nickname?.[0] ?? '?'}</span>
+          )}
         </div>
 
-        {/* 성향 태그 */}
+        {/* 닉네임 */}
+        <div className="flex items-center gap-2 mb-1.5">
+          <h1 className="text-text-strong text-2xl font-bold tracking-tight">
+            {profile.nickname}
+          </h1>
+          {isSelf && (
+            <Link
+              href="/profile/edit"
+              className="text-text-muted text-xs border border-surface-700 rounded-chip px-2.5 py-1
+                         active:bg-surface-750 transition-colors"
+            >
+              편집
+            </Link>
+          )}
+        </div>
+
+        {/* 나이 · 지역 · 성별 */}
+        <p className="text-text-secondary text-sm mb-1">
+          {profile.age_group} · {profile.region} · {genderLabel(profile.gender)}
+        </p>
+
+        {/* 가입일 */}
+        <p className="text-text-muted text-[11px] mb-4">
+          {new Date(profile.created_at).toLocaleDateString('ko-KR', {
+            year: 'numeric', month: 'long', day: 'numeric',
+          })} 가입
+        </p>
+
+        {/* 역할 칩 — 컬러 테마 */}
         {roleTags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {roleTags.map((tag: string) => (
-              <span
-                key={tag}
-                className="px-2.5 py-1 rounded-chip text-xs
-                           bg-surface-750 text-text-secondary border border-surface-700"
-              >
-                {tag}
-              </span>
-            ))}
+          <div className="flex flex-wrap gap-2 justify-center">
+            {roleTags.map((tag: string) => {
+              const t = tag.toLowerCase()
+              const cls =
+                t === 'dom'
+                  ? 'bg-desire-500/10 text-desire-400 border-desire-500/30'
+                  : t === 'sub'
+                  ? 'bg-trust-500/10 text-trust-400 border-trust-500/30'
+                  : 'bg-surface-750 text-text-secondary border-surface-600'
+              return (
+                <span key={tag}
+                  className={`px-3 py-1 rounded-chip text-xs font-medium border ${cls}`}>
+                  {tag}
+                </span>
+              )
+            })}
           </div>
         )}
       </section>
 
-      {/* 신뢰 정보 섹션 */}
-      <section className="px-6 py-4 border-b border-surface-700/40">
-        <h2 className="text-text-muted text-[11px] font-medium tracking-widest uppercase mb-3">
-          신뢰 정보
-        </h2>
-        <div className="space-y-2.5">
-          {/* 최근검사 확인 배지 */}
-          {publicStiBadge ? (
-            <StiVerificationBadge badge={publicStiBadge} />
-          ) : (
-            <p className="text-text-muted text-xs">최근검사 확인 정보 없음</p>
-          )}
-
+      {/* ── 활동 + 신뢰 — 가로 인라인 카드 ── */}
+      <div className="px-4 mb-3">
+        <div className="bg-surface-800 rounded-2xl px-4 py-3 flex items-center gap-3 flex-wrap">
           {/* 최근 활동 */}
           <div className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-state-success inline-block" />
-            <span className="text-text-muted text-xs">
-              최근 활동: {getLastActive(profile.updated_at)}
-            </span>
+            <span className="w-2 h-2 rounded-full bg-state-success flex-shrink-0" />
+            <span className="text-text-muted text-xs">{getLastActive(profile.updated_at)}</span>
           </div>
 
-          {/* 여성 메리트 */}
+          {/* 구분점 */}
+          {publicStiBadge && (
+            <span className="text-surface-600 text-xs select-none">·</span>
+          )}
+
+          {/* STI 배지 */}
+          {publicStiBadge && <StiVerificationBadge badge={publicStiBadge} />}
+
+          {/* 여성 DM 무료 */}
           {profile.gender === 'female' && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-trust-400 text-xs">받은 요청 수락 무료</span>
-            </div>
+            <>
+              <span className="text-surface-600 text-xs select-none">·</span>
+              <span className="text-trust-400 text-xs">DM 수락 무료</span>
+            </>
           )}
         </div>
-      </section>
+      </div>
 
-      {/* 자기소개 */}
+      {/* ── 자기소개 ── */}
       {profile.bio && (
-        <section className="px-6 py-5 border-b border-surface-700/40">
-          <h2 className="text-text-muted text-[11px] font-medium mb-3
-                         tracking-widest uppercase">
-            소개
-          </h2>
-          <p className="text-text-primary text-[15px] leading-7 whitespace-pre-wrap">
-            {profile.bio}
-          </p>
-        </section>
+        <div className="px-4 mb-3">
+          <div className="bg-surface-800 rounded-2xl px-4 py-4">
+            <p className="text-text-muted text-[10px] font-semibold uppercase tracking-widest mb-2.5">
+              소개
+            </p>
+            <p className="text-text-primary text-[14px] leading-7 whitespace-pre-wrap">
+              {profile.bio}
+            </p>
+          </div>
+        </div>
       )}
 
-      {/* 최근 분위기 - 본인/상대 모두 표시, 홈→프로필→DM 판단 흐름 지원 */}
+      {/* ── 최근 글 ── */}
       {posts && posts.length > 0 && (
-        <section className="px-6 py-5">
-          <h2 className="text-text-muted text-[11px] font-medium mb-3
-                         tracking-widest uppercase">
+        <div className="px-4 mb-3">
+          <p className="text-text-muted text-[10px] font-semibold uppercase tracking-widest px-1 mb-3">
             {isSelf ? '내 글' : '최근 글'}
-          </h2>
-          <div className="space-y-3">
+          </p>
+          <div className="space-y-2.5">
             {posts.map((post) => {
               const postTags: string[] = post.tags
                 ? (post.tags as string).split(/[,·\s·]+/).map((t: string) => t.trim()).filter(Boolean)
                 : []
               return (
-                <div key={post.id} className="card">
+                <div key={post.id} className="bg-surface-800 rounded-2xl p-4">
                   {post.image_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={post.image_url}
-                      alt=""
-                      className="w-full max-h-40 object-cover rounded-xl mb-3 opacity-80"
-                    />
+                    <PostImageViewer src={post.image_url} />
                   )}
-                  {postTags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-2">
+                  <p className="text-text-primary text-[14px] leading-[1.75] line-clamp-4 whitespace-pre-wrap">
+                    {post.content}
+                  </p>
+                  <div className="flex items-center justify-between mt-3">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       {postTags.map((tag: string) => (
-                        <span
-                          key={tag}
-                          className="px-2 py-0.5 rounded-chip text-[11px]
-                                     bg-surface-750 text-text-muted border border-surface-700"
-                        >
-                          {tag}
+                        <span key={tag}
+                          className="px-2 py-0.5 rounded-chip text-[10px]
+                                     bg-surface-750 text-text-muted border border-surface-700/70">
+                          #{tag}
                         </span>
                       ))}
                     </div>
-                  )}
-                  <p className="text-text-primary text-sm leading-relaxed line-clamp-4">
-                    {post.content}
-                  </p>
-                  <p className="text-text-muted text-xs mt-2">
-                    {formatTimeAgo(post.created_at)}
-                  </p>
+                    <span className="text-text-muted text-[11px] flex-shrink-0 ml-2">
+                      {formatTimeAgo(post.created_at)}
+                    </span>
+                  </div>
                 </div>
               )
             })}
           </div>
-        </section>
+        </div>
       )}
 
-      {/* Sticky CTA */}
+      {/* ── Sticky CTA ── */}
       {!isSelf && (
         <div className="fixed bottom-20 left-1/2 -translate-x-1/2 w-full max-w-md px-4 z-40">
           {isBlocked ? (

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createServerClient } from '@/lib/supabase/server'
+import { PullToRefresh } from '@/components/home/PullToRefresh'
 import type { ChatRoomStatus } from '@/types'
 
 /**
@@ -72,7 +73,7 @@ export default async function DmListPage({
   ).length
 
   return (
-    <div className="flex flex-col min-h-full">
+    <div className="flex flex-col min-h-full overscroll-y-contain">
       {/* 헤더 */}
       <header className="sticky top-0 z-10 bg-bg-900/95 backdrop-blur-sm
                          border-b border-surface-700 px-5 pt-4 pb-3">
@@ -94,7 +95,8 @@ export default async function DmListPage({
         </div>
       </header>
 
-      {/* 목록 */}
+      {/* 목록 — PullToRefresh가 목록만 감싸서 인디케이터가 헤더 아래에 표시됨 */}
+      <PullToRefresh>
       <div className="flex-1 px-4 py-4 space-y-2">
         {filteredRooms.length === 0 ? (
           <EmptyState tab={activeTab} />
@@ -147,6 +149,7 @@ export default async function DmListPage({
           })
         )}
       </div>
+      </PullToRefresh>
     </div>
   )
 }

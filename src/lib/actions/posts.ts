@@ -65,6 +65,44 @@ export async function createPost(
   redirect('/home')
 }
 
+export async function toggleLike(postId: string): Promise<ApiResponse<{ liked: boolean }>> {
+  const supabase = await createServerClient()
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return { success: false, data: null, error: { code: 'UNAUTHORIZED', message: '로그인이 필요합니다' } }
+  }
+
+  const { data, error } = await supabase.rpc('toggle_post_like', {
+    p_post_id: postId,
+    p_user_id: user.id,
+  })
+
+  if (error) {
+    return { success: false, data: null, error: { code: 'DB_ERROR', message: '좋아요 처리에 실패했습니다' } }
+  }
+
+  return { success: true, data: data as { liked: boolean }, error: null }
+}
+
+export async function markNotificationsRead(notificationIds: string[]): Promise<ApiResponse> {
+  if (notificationIds.length === 0) return { success: true, data: null, error: null }
+  const supabase = await createServerClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return { success: false, data: null, error: { code: 'UNAUTHORIZED', message: '로그인이 필요합니다' } }
+  }
+  const { error } = await supabase
+    .from('notifications')
+    .update({ read: true })
+    .eq('user_id', user.id)
+    .in('id', notificationIds)
+  if (error) {
+    return { success: false, data: null, error: { code: 'DB_ERROR', message: '읽음 처리에 실패했습니다' } }
+  }
+  return { success: true, data: null, error: null }
+}
+
 export async function deletePost(postId: string): Promise<ApiResponse> {
   const supabase = await createServerClient()
 
