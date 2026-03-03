@@ -16,7 +16,7 @@ function formatTimeAgo(dateString: string): string {
 }
 
 function mergeAndSortByDate(
-  likeNotifications: { id: string; createdAt: string; read: boolean; actorNickname?: string; type?: string }[],
+  likeNotifications: { id: string; createdAt: string; read: boolean; actorNickname?: string; actorId?: string | null; type?: string }[],
   systemNotifications: { id: string; createdAt: string; read: boolean; message?: string; type?: string }[]
 ): { id: string; createdAt: string; read: boolean; kind: 'like' | 'system'; like?: typeof likeNotifications[0]; system?: typeof systemNotifications[0] }[] {
   const combined = [
