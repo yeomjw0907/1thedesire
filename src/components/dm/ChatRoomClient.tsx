@@ -427,7 +427,7 @@ export function ChatRoomClient({ room, messages, currentUserId, otherNickname, o
               <div
                 className={`flex items-end gap-2 ${isMine ? 'justify-end' : 'justify-start'}`}
               >
-                {isMine && msg.message_type !== 'system' && (
+                {isMine && (
                   <span className="flex-shrink-0 self-center mr-1 text-text-muted" title={msg.read_at ? '읽음' : '전송됨'}>
                     {msg.read_at ? (
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
