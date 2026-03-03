@@ -6,7 +6,8 @@ import type { ApiResponse } from '@/types'
 
 export async function reportUser(
   targetUserId: string,
-  reason: string
+  reason: string,
+  roomId?: string | null
 ): Promise<ApiResponse> {
   const supabase = await createServerClient()
 
@@ -21,6 +22,7 @@ export async function reportUser(
       reporter_id: user.id,
       target_user_id: targetUserId,
       reason,
+      ...(roomId ? { target_room_id: roomId } : {}),
     })
 
   if (error) {

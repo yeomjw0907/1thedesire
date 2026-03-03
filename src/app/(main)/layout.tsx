@@ -20,7 +20,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
   return (
     <NotificationProvider>
       <div className="flex flex-col min-h-screen">
-        <main className="flex-1 pb-20">
+        <main className="flex-1 flex flex-col min-h-0 pb-20">
           {children}
         </main>
         <BottomNav />

@@ -13,6 +13,8 @@
     background-color: #0B0B0D;
     color: #DDD6CF;
     height: 100%;
+    /* 브라우저 기본 당겨서 새로고침 비활성화 (앱 PullToRefresh만 사용) */
+    overscroll-behavior-y: none;
   }
 
   body {
@@ -87,6 +89,15 @@
   }
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     background: #3a3a42;
+  }
+
+  /* 스크롤바 숨김 (스크롤 동작은 유지) */
+  .scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 
   /* 토스트 상태별 스타일 */

@@ -20,19 +20,34 @@ function err<T = never>(code: string, message: string): ApiResponse<T> {
 }
 
 // ──────────────────────────────────────────────────────────────
-// 1. 메시지 전송
+// 1. 메시지 전송 (텍스트 또는 이미지)
 // ──────────────────────────────────────────────────────────────
 export async function sendMessage(
   roomId: string,
-  content: string
-): Promise<ApiResponse<{ message_id: string }>> {
+  content: string,
+  imageUrl?: string | null
+): Promise<
+  ApiResponse<{
+    message_id: string
+    message: {
+      id: string
+      sender_id: string
+      content: string
+      message_type: 'text' | 'system' | 'image'
+      message_status: string
+      created_at: string
+      image_url?: string | null
+    }
+  }>
+> {
   const supabase = await createServerClient()
 
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) return err('UNAUTHORIZED', '로그인이 필요합니다')
 
   const trimmed = content.trim()
-  if (!trimmed || trimmed.length < 1) return err('INVALID_CONTENT', '메시지를 입력해주세요')
+  const isImage = !!imageUrl?.trim()
+  if (!isImage && (!trimmed || trimmed.length < 1)) return err('INVALID_CONTENT', '메시지를 입력해주세요')
   if (trimmed.length > 1000) return err('CONTENT_TOO_LONG', '메시지는 1000자 이내로 입력해주세요')
 
   // 채팅방 확인
@@ -72,21 +87,137 @@ export async function sendMessage(
 
   if (block) return err('BLOCKED_RELATIONSHIP', '차단 관계로 메시지를 보낼 수 없습니다')
 
-  // 메시지 INSERT
+  // 메시지 INSERT (이미지 시 message_type 'image', image_url 저장)
+  // content는 NOT NULL이므로 이미지 전용일 때도 빈 문자열 전달
+  const insertPayload: {
+    room_id: string
+    sender_id: string
+    content: string
+    message_type: 'text' | 'image'
+    image_url?: string
+  } = {
+    room_id: roomId,
+    sender_id: user.id,
+    content: trimmed || '',
+    message_type: isImage ? 'image' : 'text',
+  }
+  if (isImage && imageUrl?.trim()) {
+    insertPayload.image_url = imageUrl.trim()
+  }
   const { data: message, error: msgErr } = await supabase
     .from('messages')
-    .insert({
-      room_id: roomId,
-      sender_id: user.id,
-      content: trimmed,
-      message_type: 'text',
-    })
-    .select('id')
+    .insert(insertPayload)
+    .select('id, sender_id, content, message_type, message_status, created_at, image_url')
     .single()
 
-  if (msgErr || !message) return err('DB_ERROR', '메시지 전송에 실패했습니다')
+  if (msgErr || !message) {
+    const detail = msgErr?.message ?? ''
+    return err('DB_ERROR', detail ? `메시지 전송에 실패했습니다: ${detail}` : '메시지 전송에 실패했습니다')
+  }
 
-  return { success: true, data: { message_id: message.id }, error: null }
+  return {
+    success: true,
+    data: {
+      message_id: message.id,
+      message: {
+        id: message.id,
+        sender_id: message.sender_id,
+        content: message.content,
+        message_type: message.message_type as 'text' | 'system' | 'image',
+        message_status: message.message_status ?? 'active',
+        created_at: message.created_at,
+        image_url: message.image_url ?? null,
+      },
+    },
+    error: null,
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// 1-2. DM 이미지 업로드 (dm-images 버킷)
+// ──────────────────────────────────────────────────────────────
+export async function uploadDmImage(
+  roomId: string,
+  formData: FormData
+): Promise<ApiResponse<{ url: string }>> {
+  const supabase = await createServerClient()
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) return err('UNAUTHORIZED', '로그인이 필요합니다')
+
+  const file = formData.get('file') as File | null
+  if (!file?.size || !file.type.startsWith('image/')) return err('INVALID_FILE', '이미지 파일을 선택해주세요')
+  if (file.size > 5 * 1024 * 1024) return err('FILE_TOO_LARGE', '이미지는 5MB 이하로 올려주세요')
+
+  const { data: room } = await supabase
+    .from('chat_rooms')
+    .select('id, initiator_id, receiver_id, status')
+    .eq('id', roomId)
+    .single()
+
+  if (!room) return err('NOT_FOUND', '채팅방을 찾을 수 없습니다')
+  const isParticipant = room.initiator_id === user.id || room.receiver_id === user.id
+  if (!isParticipant || room.status !== 'agreed') return err('FORBIDDEN', '메시지를 보낼 수 없습니다')
+
+  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+  const safeExt = ['jpeg', 'jpg', 'png', 'webp', 'gif'].includes(ext) ? ext : 'jpg'
+  const path = `${user.id}/${roomId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${safeExt}`
+
+  const { error: uploadErr } = await supabase.storage
+    .from('dm-images')
+    .upload(path, file, { contentType: file.type, upsert: false })
+
+  if (uploadErr) {
+    const detail = uploadErr.message ?? ''
+    return err('UPLOAD_ERROR', detail ? `이미지 업로드에 실패했습니다: ${detail}` : '이미지 업로드에 실패했습니다')
+  }
+
+  const { data: urlData } = supabase.storage.from('dm-images').getPublicUrl(path)
+  return { success: true, data: { url: urlData.publicUrl }, error: null }
+}
+
+// ──────────────────────────────────────────────────────────────
+// 1-3. 읽음 처리 (수신자가 채팅방에서 확인한 메시지에 read_at 설정)
+// ──────────────────────────────────────────────────────────────
+export async function markMessagesAsRead(
+  roomId: string,
+  messageIds: string[]
+): Promise<ApiResponse> {
+  const supabase = await createServerClient()
+  const admin = createAdminClient()
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) return err('UNAUTHORIZED', '로그인이 필요합니다')
+  if (!messageIds.length) return { success: true, data: null, error: null }
+
+  const { data: room } = await supabase
+    .from('chat_rooms')
+    .select('id, initiator_id, receiver_id')
+    .eq('id', roomId)
+    .single()
+
+  if (!room) return err('NOT_FOUND', '채팅방을 찾을 수 없습니다')
+  const isParticipant = room.initiator_id === user.id || room.receiver_id === user.id
+  if (!isParticipant) return err('FORBIDDEN', '권한이 없습니다')
+
+  // 상대가 보낸 메시지만 읽음 처리 (sender_id !== currentUserId)
+  const { data: messages } = await supabase
+    .from('messages')
+    .select('id')
+    .eq('room_id', roomId)
+    .neq('sender_id', user.id)
+    .in('id', messageIds)
+
+  const idsToMark = (messages ?? []).map((m) => m.id)
+  if (idsToMark.length === 0) return { success: true, data: null, error: null }
+
+  const now = new Date().toISOString()
+  await admin
+    .from('messages')
+    .update({ read_at: now })
+    .in('id', idsToMark)
+
+  return { success: true, data: null, error: null }
 }
 
 // ──────────────────────────────────────────────────────────────

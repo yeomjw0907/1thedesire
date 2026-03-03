@@ -10,10 +10,14 @@ import type { PublicStiBadge } from '@/types/sti'
 
 export default async function ProfileDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ from?: string }>
 }) {
   const { id } = await params
+  const { from } = await searchParams
+  const fromDm = from === 'dm'
   const supabase = await createServerClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -228,8 +232,8 @@ export default async function ProfileDetailPage({
         </div>
       )}
 
-      {/* ── Sticky CTA ── */}
-      {!isSelf && (
+      {/* ── Sticky CTA (DM 경로로 진입 시 숨김) ── */}
+      {!isSelf && !fromDm && (
         <div className="fixed bottom-20 left-1/2 -translate-x-1/2 w-full max-w-md px-4 z-40">
           {isBlocked ? (
             <div className="w-full py-4 rounded-chip bg-surface-750 border border-surface-700

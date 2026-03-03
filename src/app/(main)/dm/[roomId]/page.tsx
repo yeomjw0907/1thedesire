@@ -2,6 +2,8 @@ import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createServerClient } from '@/lib/supabase/server'
 import { ChatRoomClient } from '@/components/dm/ChatRoomClient'
+import { ChatRoomHeaderMenu } from '@/components/dm/ChatRoomHeaderMenu'
+import { PullToRefresh } from '@/components/home/PullToRefresh'
 import type { ChatRoomStatus } from '@/types'
 
 /**
@@ -20,7 +22,7 @@ export default async function ChatRoomPage({
 
   const { roomId } = await params
 
-  const { data: room } = await supabase
+  const { data: room, error: roomError } = await supabase
     .from('chat_rooms')
     .select(`
       id,
@@ -34,7 +36,7 @@ export default async function ChatRoomPage({
     .eq('id', roomId)
     .single()
 
-  if (!room) notFound()
+  if (roomError || !room) notFound()
 
   const isParticipant = room.initiator_id === user.id || room.receiver_id === user.id
   if (!isParticipant) redirect('/dm')
@@ -54,49 +56,78 @@ export default async function ChatRoomPage({
 
   const messagesPromise = supabase
     .from('messages')
-    .select('id, sender_id, content, message_type, message_status, created_at')
+    .select('id, sender_id, content, message_type, message_status, created_at, image_url')
     .eq('room_id', roomId)
     .order('created_at', { ascending: true })
     .limit(200)
 
-  const [, messagesRes] = await Promise.all([consentPromise, messagesPromise])
-  const messages = messagesRes.data
+  const [consentRes, messagesRes, reportRes] = await Promise.all([
+    consentPromise,
+    messagesPromise,
+    supabase.from('reports').select('id').eq('target_room_id', roomId).limit(1).maybeSingle(),
+  ])
+  const messages = messagesRes.data ?? []
+  const roomReported = !reportRes.error && !!reportRes.data
 
   const initiator = room.initiator as unknown as { id: string; nickname: string | null; withdrawn_at?: string | null } | null
   const receiver = room.receiver as unknown as { id: string; nickname: string | null; withdrawn_at?: string | null } | null
   const isSender = room.initiator_id === user.id
   const otherProfile = isSender ? receiver : initiator
   const otherNickname = otherProfile?.withdrawn_at ? '탈퇴한 사용자' : (otherProfile?.nickname ?? '알 수 없음')
+  let otherAvatarUrl: string | null = null
+  if (otherProfile?.id) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('avatar_url')
+      .eq('id', otherProfile.id)
+      .single()
+    otherAvatarUrl = profile?.avatar_url ?? null
+  }
 
   return (
-    <div className="flex flex-col h-screen">
-      {/* 헤더 */}
-      <header className="flex items-center gap-3 px-4 pt-4 pb-3
+    <PullToRefresh>
+      <div className="flex flex-col flex-1 min-h-0 overscroll-y-contain">
+        {/* 헤더 */}
+        <header className="flex items-center gap-3 px-4 pt-4 pb-3
                          border-b border-surface-700/60 bg-bg-900/95
-                         backdrop-blur-sm sticky top-0 z-10 flex-shrink-0">
+                         backdrop-blur-sm flex-shrink-0">
         <Link
           href="/dm"
-          className="text-text-muted active:text-text-secondary transition-colors p-1 -ml-1"
+          className="text-text-muted active:text-text-secondary transition-colors p-1 -ml-1 flex-shrink-0"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
         </Link>
+        {/* 상대 아바타 */}
+        <div className="w-9 h-9 rounded-full bg-surface-700 border border-surface-600 flex-shrink-0 overflow-hidden flex items-center justify-center text-text-muted text-sm font-medium">
+          {otherAvatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={otherAvatarUrl} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <span>{otherNickname[0] ?? '?'}</span>
+          )}
+        </div>
         <div className="min-w-0 flex-1">
-          <p className="text-text-strong font-medium text-sm truncate">{otherNickname}</p>
+          <Link
+            href={`/profile/${otherProfile?.id}?from=dm`}
+            className="block text-text-strong font-medium text-sm truncate active:opacity-70 transition-opacity"
+          >
+            {otherNickname}
+          </Link>
           <RoomStatusText status={room.status as ChatRoomStatus} />
         </div>
-        <Link
-          href={`/profile/${otherProfile?.id}`}
-          className="text-text-muted text-xs active:opacity-70 transition-opacity flex-shrink-0"
-        >
-          프로필
-        </Link>
+        <ChatRoomHeaderMenu
+          roomId={room.id}
+          otherUserId={otherProfile?.id ?? ''}
+          otherNickname={otherNickname}
+          roomStatus={room.status as ChatRoomStatus}
+        />
       </header>
 
-      {/* 채팅 영역 */}
-      <div className="flex-1 overflow-hidden">
+      {/* 채팅 영역: 남는 높이만 사용해 입력창이 항상 보이게 */}
+      <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
         <ChatRoomClient
           room={{
             id: room.id,
@@ -105,19 +136,24 @@ export default async function ChatRoomPage({
             receiver_id: room.receiver_id,
             request_expires_at: room.request_expires_at,
           }}
-          messages={(messages ?? []) as {
+          messages={messages as {
             id: string
             sender_id: string
             content: string
-            message_type: 'text' | 'system'
+            message_type: 'text' | 'system' | 'image'
             message_status: string
             created_at: string
+            image_url?: string | null
+            read_at?: string | null
           }[]}
           currentUserId={user.id}
           otherNickname={otherNickname}
+          otherAvatarUrl={otherAvatarUrl}
+          roomReported={roomReported}
         />
       </div>
-    </div>
+      </div>
+    </PullToRefresh>
   )
 }
 

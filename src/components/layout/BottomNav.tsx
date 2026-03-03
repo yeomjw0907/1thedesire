@@ -27,6 +27,10 @@ export function BottomNav() {
     setPendingHref(null)
   }, [pathname])
 
+  // 채팅방에서는 하단 네비 숨김 — 채팅에만 집중
+  const isChatRoom = pathname.startsWith('/dm/')
+  if (isChatRoom) return null
+
   function handleNav(href: string) {
     if (pathname === href || pathname.startsWith(`${href}/`)) return
     setPendingHref(href)

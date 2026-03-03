@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useCallback, useTransition } from 'react'
+import { useRef, useState, useCallback, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 const PULL_THRESHOLD = 72
@@ -17,6 +17,18 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
   const isAtTop = useCallback(() => {
     return window.scrollY <= 0
   }, [])
+
+  // 브라우저 기본 당겨서 새로고침 차단 (Chrome 등): passive: false로 preventDefault 적용
+  useEffect(() => {
+    function touchMove(e: TouchEvent) {
+      if (startYRef.current == null || refreshing) return
+      if (window.scrollY > 0) return
+      const dy = e.touches[0].clientY - startYRef.current
+      if (dy > 8) e.preventDefault()
+    }
+    document.documentElement.addEventListener('touchmove', touchMove, { passive: false })
+    return () => document.documentElement.removeEventListener('touchmove', touchMove)
+  }, [refreshing])
 
   function onTouchStart(e: React.TouchEvent) {
     if (!isAtTop()) return
@@ -57,7 +69,7 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
-      style={{ touchAction: 'pan-x pan-down' }}
+      style={{ touchAction: 'pan-x pan-down', overscrollBehaviorY: 'contain' }}
     >
       {/* 인디케이터 — 피드 위, 헤더 아래 */}
       <div
