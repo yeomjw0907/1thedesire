@@ -129,21 +129,14 @@ export default async function AdminPage({
             <p className="text-text-muted text-sm px-1">충전 대기 건이 없습니다</p>
           ) : (
             <div className="space-y-2">
-              {pendingCharges.map((row: {
-                id: string
-                user_id: string
-                amount: number
-                amount_krw: number | null
-                depositor_name: string | null
-                description: string | null
-                created_at: string
-                profiles: { id: string; nickname: string } | null
-              }) => (
+              {pendingCharges.map((row) => {
+                const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
+                return (
                 <div key={row.id} className="card">
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="min-w-0 flex-1">
                       <p className="text-text-primary text-sm">
-                        <span className="text-desire-400">{row.profiles?.nickname ?? '알 수 없음'}</span>
+                        <span className="text-desire-400">{profile?.nickname ?? '알 수 없음'}</span>
                         {' · '}
                         <span className="text-text-secondary">{row.amount}P</span>
                         {row.amount_krw != null && (
@@ -157,7 +150,8 @@ export default async function AdminPage({
                   </div>
                   <AdminChargeActions transactionId={row.id} />
                 </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </section>

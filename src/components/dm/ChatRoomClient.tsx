@@ -445,7 +445,7 @@ export function ChatRoomClient({ room, messages, currentUserId, otherNickname, o
                   <div
                     className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed overflow-hidden
                                 ${(msg.image_url || msg.message_type === 'image')
-                                  ? 'w-[70vw] max-w-[70vw]'
+                                  ? 'w-full max-w-[280px]'
                                   : 'w-max max-w-[70vw]'
                                 }
                                 ${isMine
