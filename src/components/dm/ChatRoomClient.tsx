@@ -364,54 +364,6 @@ export function ChatRoomClient({ room, messages, currentUserId, otherNickname, o
         </div>
       )}
 
-      {/* 발신자 패널: pending 상태 */}
-      {isPending2 && !isReceiver && (
-        <div className="px-4 py-4 border-b border-surface-700/60 bg-surface-750/50">
-          <p className="text-text-muted text-sm text-center">
-            {otherNickname}님의 수락을 기다리고 있습니다
-          </p>
-          {room.request_expires_at && (
-            <p className="text-text-muted text-xs text-center mt-1">
-              응답 없으면 <ExpiryText expiresAt={room.request_expires_at} /> 후 자동 만료 · 전액 환불
-            </p>
-          )}
-          {!showBlockConfirm && (
-            <p className="text-center mt-3">
-              <button
-                type="button"
-                onClick={() => setShowBlockConfirm(true)}
-                className="text-state-danger text-xs active:opacity-70"
-              >
-                요청 취소(차단)
-              </button>
-            </p>
-          )}
-          {showBlockConfirm && (
-            <div className="mt-3 pt-3 border-t border-surface-700/50">
-              <p className="text-text-primary text-sm mb-2">
-                취소하면 상대방이 차단되며 포인트는 환불되지 않습니다.
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowBlockConfirm(false)}
-                  className="flex-1 py-2 rounded-chip bg-surface-700 text-text-secondary text-xs"
-                >
-                  돌아가기
-                </button>
-                <button
-                  onClick={handleBlock}
-                  disabled={isPending}
-                  className="flex-1 py-2 rounded-chip bg-state-danger/80 text-white text-xs
-                             disabled:opacity-40"
-                >
-                  {isPending ? '처리 중...' : '취소(차단)'}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* 종료/차단된 방 안내 (입력 잠금이 아닌 상단 배너) */}
       {!isPending2 && !isAgreed && !isLocked && (
         <div className="px-4 py-3 border-b border-surface-700/60 bg-surface-750/50">
@@ -783,15 +735,6 @@ export function ChatRoomClient({ room, messages, currentUserId, otherNickname, o
       )}
     </>
   )
-}
-
-function ExpiryText({ expiresAt }: { expiresAt: string }) {
-  const remaining = new Date(expiresAt).getTime() - Date.now()
-  if (remaining <= 0) return <span>만료됨</span>
-  const hours = Math.floor(remaining / 3600000)
-  const mins = Math.floor((remaining % 3600000) / 60000)
-  if (hours > 0) return <span>{hours}시간 {mins}분 남음</span>
-  return <span>{mins}분 남음</span>
 }
 
 /** 날짜 구분 라벨 (오늘, 어제, 2024. 3. 1.) */

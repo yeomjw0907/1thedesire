@@ -94,7 +94,7 @@ export function ProfileGallery({ urls }: Props) {
               </button>
             ) : (
               <div
-                className="w-full h-full bg-surface-700/80 animate-pulse rounded-xl"
+                className="w-full h-full bg-surface-700/50 rounded-xl border border-dashed border-surface-600"
                 aria-hidden
               />
             )}

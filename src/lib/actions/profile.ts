@@ -96,3 +96,25 @@ export async function updateProfile(
 
   redirect('/profile')
 }
+
+/** 프로필 아바타 URL만 DB에 반영 (스토리지 업로드는 클라이언트에서 완료 후 URL 전달) */
+export async function updateProfileAvatarUrl(avatarUrl: string): Promise<ApiResponse> {
+  const supabase = await createServerClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return { success: false, data: null, error: { code: 'UNAUTHORIZED', message: '로그인이 필요합니다' } }
+  }
+  const url = avatarUrl?.trim()
+  if (!url) {
+    return { success: false, data: null, error: { code: 'INVALID_INPUT', message: 'URL이 없습니다' } }
+  }
+  const { error } = await supabase
+    .from('profiles')
+    .update({ avatar_url: url })
+    .eq('id', user.id)
+  if (error) {
+    console.error('[updateProfileAvatarUrl]', error)
+    return { success: false, data: null, error: { code: 'DB_ERROR', message: '프로필 이미지를 저장하는 데 실패했습니다.' } }
+  }
+  return { success: true, data: null, error: null }
+}

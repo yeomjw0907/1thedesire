@@ -148,6 +148,19 @@ export default async function MyProfilePage() {
             profile.gallery_url_5 ?? null,
           ]}
         />
+        {[profile.gallery_url_1, profile.gallery_url_2, profile.gallery_url_3, profile.gallery_url_4, profile.gallery_url_5].every((u) => !u) && (
+          <Link
+            href="/profile/edit"
+            className="mt-2 flex items-center justify-center gap-2 py-3 rounded-xl bg-surface-750 border border-surface-700 border-dashed text-text-muted text-sm active:bg-surface-700 transition-colors"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            갤러리 사진 추가하러 가기
+          </Link>
+        )}
       </section>
 
       {/* 자기소개 — 카드 */}

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { updateProfileAvatarUrl } from '@/lib/actions/profile'
 
 interface Props {
   userId: string
@@ -48,21 +49,11 @@ export function AvatarUploadButton({ userId, nickname, currentAvatarUrl }: Props
 
       const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(path)
 
-      const { error: dbErr } = await supabase
-        .from('profiles')
-        .update({ avatar_url: publicUrl })
-        .eq('id', userId)
-
-      if (dbErr) {
-        // Storage 업로드는 성공했으나 DB 반영 실패 → 고아 파일 cleanup 시도
-        console.error('[AvatarUpload] storage 업로드 성공, DB 업데이트 실패:', dbErr)
+      const result = await updateProfileAvatarUrl(publicUrl)
+      if (!result.success) {
         const { error: removeErr } = await supabase.storage.from(BUCKET).remove([path])
-        if (removeErr) {
-          console.error('[AvatarUpload] 고아 파일 cleanup 실패 (수동 정리 필요):', path, removeErr)
-        } else {
-          console.warn('[AvatarUpload] 고아 파일 cleanup 성공:', path)
-        }
-        throw new Error('프로필 이미지를 저장하는 데 실패했습니다.')
+        if (removeErr) console.error('[AvatarUpload] 고아 파일 cleanup 실패:', path, removeErr)
+        throw new Error(result.error?.message ?? '프로필 이미지를 저장하는 데 실패했습니다.')
       }
 
       setAvatarUrl(publicUrl)
