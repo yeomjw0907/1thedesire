@@ -36,7 +36,7 @@ export default function RootLayout({
       <body className="bg-bg-900 text-text-primary antialiased">
         <FontLoader />
         <link rel="preconnect" href="https://cdn.jsdelivr.net" />
-        <div className="mx-auto max-w-md min-h-screen relative">
+        <div className="mx-auto max-w-md min-h-screen relative pt-[env(safe-area-inset-top)]">
           {children}
         </div>
         <Toaster

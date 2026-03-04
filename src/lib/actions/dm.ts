@@ -26,7 +26,7 @@ function err<T = never>(code: string, message: string): ApiResponse<T> {
 }
 
 // ──────────────────────────────────────────────────────────────
-// 1. DM 요청 생성 (90P 차감, pending 생성)
+// 1. DM 보내기 (90P 차감 후 agreed 방 생성, 또는 기존 방 id 반환)
 // ──────────────────────────────────────────────────────────────
 export async function sendDmRequest(
   receiverId: string
@@ -59,10 +59,9 @@ export async function sendDmRequest(
 
   if (rpcErr) {
     const msg = rpcErr.message ?? ''
-    if (msg.includes('INSUFFICIENT_POINTS')) return err('INSUFFICIENT_POINTS', `포인트가 부족합니다. DM 요청에는 ${POINTS.DM_REQUEST_COST}P가 필요합니다`)
-    if (msg.includes('ALREADY_PENDING')) return err('ALREADY_PENDING', '이미 대기 중인 요청이 있습니다')
+    if (msg.includes('INSUFFICIENT_POINTS')) return err('INSUFFICIENT_POINTS', `포인트가 부족합니다. DM 보내기에는 ${POINTS.DM_REQUEST_COST}P가 필요합니다`)
     if (msg.includes('USER_NOT_FOUND')) return err('NOT_FOUND', '사용자를 찾을 수 없습니다')
-    return err('DB_ERROR', 'DM 요청에 실패했습니다')
+    return err('DB_ERROR', 'DM 보내기에 실패했습니다')
   }
 
   return { success: true, data: { room_id: roomId as string }, error: null }

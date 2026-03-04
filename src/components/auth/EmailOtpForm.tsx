@@ -101,11 +101,7 @@ export function EmailOtpForm() {
     if (profile) {
       router.push('/home')
     } else {
-      await supabase.auth.signOut()
-      toast.error('일치하는 회원이 없습니다.')
-      setSent(false)
-      setSentEmail('')
-      setOtpCode('')
+      router.push('/signup')
     }
   }
 

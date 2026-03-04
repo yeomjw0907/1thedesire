@@ -31,14 +31,15 @@ export function DmRequestSheet({ targetUserId, targetProfile, myPoints, response
     setError(null)
     startTransition(async () => {
       const result = await sendDmRequest(targetUserId)
-      if (result.success) {
+      const roomId = result.success ? result.data?.room_id : undefined
+      if (roomId) {
         setSent(true)
         setTimeout(() => {
           setOpen(false)
-          router.push('/dm')
+          router.push(`/dm/${roomId}`)
         }, 1400)
       } else {
-        setError(result.error?.message ?? '요청에 실패했습니다')
+        setError(result.error?.message ?? 'DM 보내기에 실패했습니다')
       }
     })
   }
@@ -50,10 +51,10 @@ export function DmRequestSheet({ targetUserId, targetProfile, myPoints, response
         className="w-full py-4 rounded-chip bg-desire-500 text-white font-semibold
                    active:bg-desire-400 transition-colors"
       >
-        대화 요청 보내기
+        DM 보내기
       </button>
       <p className="text-center text-text-muted text-xs mt-2">
-        요청 시 {POINTS.DM_REQUEST_COST}P 차감 · 미응답 시 전액 환불 · 수락 후 대화 무료
+        DM 보내기 시 {POINTS.DM_REQUEST_COST}P 차감 · 바로 대화 가능
       </p>
 
       {open && createPortal(
@@ -67,7 +68,7 @@ export function DmRequestSheet({ targetUserId, targetProfile, myPoints, response
             {/* Handle */}
             <div className="w-10 h-1 bg-surface-700 rounded-chip mx-auto mt-3 mb-5" />
 
-            <h3 className="text-text-strong text-lg font-semibold mb-4">대화 요청 보내기</h3>
+            <h3 className="text-text-strong text-lg font-semibold mb-4">DM 보내기</h3>
 
             {/* 상대 정보 */}
             <div className="bg-surface-750 rounded-2xl px-4 py-3 mb-4
@@ -102,11 +103,10 @@ export function DmRequestSheet({ targetUserId, targetProfile, myPoints, response
             {/* 정책 패널 */}
             <div className="bg-surface-750 rounded-2xl px-4 py-3 mb-5
                             border border-surface-700/50 space-y-2.5">
-              <PolicyRow label={`요청 시 ${POINTS.DM_REQUEST_COST}P가 차감됩니다`} variant="debit" />
-              <PolicyRow label="24시간 내 응답이 없으면 전액 환불됩니다" variant="refund" />
-              <PolicyRow label="수락 후 대화는 무료입니다" variant="free" />
-              <PolicyRow label="차단 또는 요청 취소 시에는 환불되지 않습니다" variant="debit" />
-              <PolicyRow label="원치 않는 요청은 차단할 수 있으며, 프로필에서 신고할 수 있습니다" variant="free" />
+              <PolicyRow label={`${POINTS.DM_REQUEST_COST}P 차감 후 바로 대화를 시작할 수 있습니다`} variant="debit" />
+              <PolicyRow label="이미 대화 중인 상대는 추가 차감 없이 대화방으로 이동합니다" variant="free" />
+              <PolicyRow label="차단 시에는 환불되지 않습니다" variant="debit" />
+              <PolicyRow label="원치 않는 대화는 차단·신고할 수 있습니다" variant="free" />
             </div>
 
             {!hasPoints && (
@@ -136,7 +136,7 @@ export function DmRequestSheet({ targetUserId, targetProfile, myPoints, response
             {sent && (
               <div className="mb-4 px-4 py-3 bg-trust-500/10 rounded-xl
                               text-trust-400 text-sm border border-trust-500/20">
-                요청을 보냈습니다. DM 화면으로 이동합니다.
+                대화방으로 이동합니다.
               </div>
             )}
 
@@ -157,7 +157,7 @@ export function DmRequestSheet({ targetUserId, targetProfile, myPoints, response
                            font-semibold active:bg-desire-400
                            disabled:opacity-40 transition-colors"
               >
-                {isPending ? '요청 중...' : '요청 보내기'}
+                {isPending ? '처리 중...' : `${POINTS.DM_REQUEST_COST}P 차감하고 대화하기`}
               </button>
             </div>
           </div>

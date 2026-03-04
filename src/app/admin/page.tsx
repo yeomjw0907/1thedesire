@@ -17,7 +17,7 @@ import type { AccountStatus } from '@/types'
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ section?: string }>
+  searchParams: Promise<{ section?: string; reportStatus?: string }>
 }) {
   const supabase = await createServerClient()
 
@@ -36,17 +36,30 @@ export default async function AdminPage({
   const isEnvAdmin = adminEmails.includes(user.email ?? '')
   if (!isDbAdmin && !isEnvAdmin) redirect('/home')
 
-  const { section } = await searchParams
+  const { section, reportStatus } = await searchParams
   const activeSection = section ?? 'charges'
+  const activeReportFilter = (reportStatus === 'pending' || reportStatus === 'reviewed' || reportStatus === 'dismissed') ? reportStatus : 'all'
 
   const admin = createAdminClient()
 
-  const [roomStatsRes, reportsRes, recentUsersRes, recentPostsRes, pendingChargesRes] = await Promise.all([
+  const [
+    roomStatsRes,
+    reportsRes,
+    recentUsersRes,
+    recentPostsRes,
+    pendingChargesRes,
+    totalProfilesRes,
+    todayLoginRes,
+    moderationLogsRes,
+  ] = await Promise.all([
     admin.from('chat_rooms').select('status'),
-    admin.from('reports').select('id, reason, status, created_at, reporter:reporter_id (id, nickname), target:target_user_id (id, nickname, account_status, points)').order('created_at', { ascending: false }).limit(30),
+    admin.from('reports').select('id, reason, status, created_at, reporter:reporter_id (id, nickname), target:target_user_id (id, nickname, account_status, points)').order('created_at', { ascending: false }).limit(100),
     admin.from('profiles').select('id, nickname, gender, created_at, account_status, points').order('created_at', { ascending: false }).limit(30),
     admin.from('posts').select('id, content, status, created_at, profiles:user_id (id, nickname)').in('status', ['published', 'hidden']).order('created_at', { ascending: false }).limit(30),
     admin.from('point_transactions').select('id, user_id, amount, amount_krw, depositor_name, description, created_at, profiles:user_id (id, nickname)').eq('type', 'charge').eq('charge_status', 'pending').order('created_at', { ascending: false }).limit(50),
+    admin.from('profiles').select('id', { count: 'exact', head: true }),
+    admin.rpc('get_today_login_count').maybeSingle(),
+    admin.from('moderation_actions').select('id, target_user_id, action_type, reason, created_at, profiles:target_user_id (nickname)').order('created_at', { ascending: false }).limit(50),
   ])
 
   const roomStats = roomStatsRes.data
@@ -58,12 +71,33 @@ export default async function AdminPage({
   const recentUsers = recentUsersRes.data
   const recentPosts = recentPostsRes.data
   const pendingCharges = pendingChargesRes.data ?? []
+  const totalSignups = totalProfilesRes.count ?? 0
+  const todayLogins = (todayLoginRes.data as number | null) ?? 0
+  const matchCount = statCounts.agreed ?? 0
+  const moderationLogs = moderationLogsRes.data ?? []
+  const reportsFiltered = (reports ?? []).filter((r) => activeReportFilter === 'all' || r.status === activeReportFilter)
 
   return (
     <div className="min-h-screen bg-bg-900 px-4 py-6 pb-10">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-text-strong text-xl font-semibold">어드민</h1>
         <AdminLogoutButton />
+      </div>
+
+      {/* 요약 통계 */}
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        <div className="card text-center">
+          <p className="text-text-strong text-lg font-bold tabular-nums">{totalSignups}</p>
+          <p className="text-text-muted text-xs mt-1">총 가입자</p>
+        </div>
+        <div className="card text-center">
+          <p className="text-text-strong text-lg font-bold tabular-nums">{matchCount}</p>
+          <p className="text-text-muted text-xs mt-1">매칭(진행중)</p>
+        </div>
+        <div className="card text-center">
+          <p className="text-text-strong text-lg font-bold tabular-nums">{todayLogins}</p>
+          <p className="text-text-muted text-xs mt-1">금일 로그인</p>
+        </div>
       </div>
 
       {/* DM 통계 */}
@@ -98,13 +132,14 @@ export default async function AdminPage({
         </svg>
       </Link>
 
-      {/* 섹션 탭: 충전 → 신고 → 유저 → 게시글 */}
-      <div className="flex gap-1 mb-5 border-b border-surface-700/40 pb-3">
+      {/* 섹션 탭: 충전 → 신고 → 유저 → 게시글 → 운영 로그 */}
+      <div className="flex gap-1 mb-5 border-b border-surface-700/40 pb-3 flex-wrap">
         {[
           { key: 'charges', label: '충전' },
           { key: 'reports', label: '신고' },
           { key: 'users', label: '유저' },
           { key: 'posts', label: '게시글' },
+          { key: 'logs', label: '운영 로그' },
         ].map(({ key, label }) => (
           <Link
             key={key}
@@ -160,14 +195,33 @@ export default async function AdminPage({
       {/* 신고 섹션 */}
       {activeSection === 'reports' && (
         <section>
-          <h2 className="text-text-muted text-[11px] font-medium tracking-widest uppercase mb-3">
-            신고 목록
-          </h2>
-          {!reports || reports.length === 0 ? (
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-text-muted text-[11px] font-medium tracking-widest uppercase">
+              신고 목록
+            </h2>
+            <div className="flex gap-1">
+              {[
+                { key: 'all', label: '전체' },
+                { key: 'pending', label: '미처리' },
+                { key: 'reviewed', label: '검토완료' },
+                { key: 'dismissed', label: '기각' },
+              ].map(({ key, label }) => (
+                <Link
+                  key={key}
+                  href={key === 'all' ? '/admin?section=reports' : `/admin?section=reports&reportStatus=${key}`}
+                  className={`px-2 py-1 rounded-chip text-[11px] font-medium transition-colors
+                             ${activeReportFilter === key ? 'bg-desire-500/15 text-desire-400' : 'text-text-muted'}`}
+                >
+                  {label}
+                </Link>
+              ))}
+            </div>
+          </div>
+          {reportsFiltered.length === 0 ? (
             <p className="text-text-muted text-sm px-1">신고 내역이 없습니다</p>
           ) : (
             <div className="space-y-2">
-              {reports.map((report) => {
+              {reportsFiltered.map((report) => {
                 const reporter = report.reporter as unknown as { id: string; nickname: string } | null
                 const target = report.target as unknown as {
                   id: string; nickname: string; account_status: AccountStatus; points: number
@@ -218,7 +272,7 @@ export default async function AdminPage({
             <div className="space-y-2">
               {recentUsers.map((u) => (
                 <div key={u.id} className="card">
-                  <div className="flex items-center justify-between gap-2">
+                  <Link href={`/admin/users/${u.id}`} className="flex items-center justify-between gap-2 active:opacity-90 transition-opacity">
                     <div className="min-w-0 flex-1">
                       <p className="text-text-primary text-sm">
                         {u.nickname}
@@ -233,8 +287,11 @@ export default async function AdminPage({
                         {u.points}P
                       </span>
                       <StatusBadge status={u.account_status} />
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-muted" aria-hidden>
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
                     </div>
-                  </div>
+                  </Link>
                   <AdminUserActions
                     userId={u.id}
                     nickname={u.nickname}
@@ -277,6 +334,43 @@ export default async function AdminPage({
                         <StatusBadge status={post.status} />
                         <AdminPostActions postId={post.id} currentStatus={post.status} />
                       </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* 운영 로그 섹션 */}
+      {activeSection === 'logs' && (
+        <section>
+          <h2 className="text-text-muted text-[11px] font-medium tracking-widest uppercase mb-3">
+            제재 이력
+          </h2>
+          {moderationLogs.length === 0 ? (
+            <p className="text-text-muted text-sm px-1">제재 이력이 없습니다</p>
+          ) : (
+            <div className="space-y-2">
+              {moderationLogs.map((log) => {
+                const profile = Array.isArray(log.profiles) ? log.profiles[0] : log.profiles
+                const targetNickname = (profile as { nickname?: string } | null)?.nickname ?? '알 수 없음'
+                return (
+                  <div key={log.id} className="card">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-text-primary text-sm">
+                          <Link href={`/admin/users/${log.target_user_id}`} className="text-desire-400 hover:underline">
+                            {targetNickname}
+                          </Link>
+                          <span className="text-text-muted text-xs ml-2">{log.action_type}</span>
+                        </p>
+                        {log.reason && (
+                          <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{log.reason}</p>
+                        )}
+                      </div>
+                      <p className="text-text-muted text-[10px] flex-shrink-0">{formatDate(log.created_at)}</p>
                     </div>
                   </div>
                 )

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useRef, useEffect } from 'react'
+import { useState, useTransition, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { acceptDmRequest, blockFromRoom } from '@/lib/actions/dm'
@@ -49,8 +49,23 @@ export function ChatRoomClient({ room, messages, currentUserId, otherNickname, o
   const [isUploadingImage, setIsUploadingImage] = useState(false)
   const [lightboxImageUrl, setLightboxImageUrl] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
+  const [failedImageIds, setFailedImageIds] = useState<Set<string>>(new Set())
+  const [mainInputUnlocked, setMainInputUnlocked] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const markedReadIdsRef = useRef<Set<string>>(new Set())
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const mainTextareaRef = useRef<HTMLTextAreaElement>(null)
+  const captionTextareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Safari(iOS): 터치 시 키보드가 안 뜨는 경우 — 명시적 focus + readOnly 해제 트릭
+  const focusMainInput = useCallback(() => {
+    setMainInputUnlocked(true)
+    requestAnimationFrame(() => mainTextareaRef.current?.focus())
+  }, [])
+  const focusCaptionInput = useCallback(() => {
+    requestAnimationFrame(() => captionTextareaRef.current?.focus())
+  }, [])
 
   const isReceiver = room.receiver_id === currentUserId
   const isPending2 = room.status === 'pending'
@@ -69,15 +84,32 @@ export function ChatRoomClient({ room, messages, currentUserId, otherNickname, o
     }
   }, [pendingImage])
 
-  // 진입 시 상대 메시지 읽음 처리 (수신자만)
+  // 방 바뀌면 읽음 처리 대상 Set 초기화
+  useEffect(() => {
+    markedReadIdsRef.current = new Set()
+  }, [room.id])
+
+  // 상대 메시지가 뷰포트에 보일 때만 읽음 처리 (방 입장 시 일괄 처리 제거)
   useEffect(() => {
     if (!isAgreed || !isReceiver) return
-    const otherMessageIds = localMessages
-      .filter((m) => m.sender_id !== currentUserId && m.message_type !== 'system')
-      .map((m) => m.id)
-    if (otherMessageIds.length === 0) return
-    markMessagesAsRead(room.id, otherMessageIds)
-  }, [room.id, isAgreed, isReceiver]) // eslint-disable-line react-hooks/exhaustive-deps -- 진입 시 1회만
+    const scrollEl = scrollContainerRef.current
+    if (!scrollEl) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue
+          const id = (entry.target as HTMLElement).dataset.readMessageId
+          if (!id || markedReadIdsRef.current.has(id)) continue
+          markedReadIdsRef.current.add(id)
+          markMessagesAsRead(room.id, [id])
+        }
+      },
+      { root: scrollEl, rootMargin: '0px', threshold: 0.2 }
+    )
+    const nodes = scrollEl.querySelectorAll('[data-read-message-id]')
+    nodes.forEach((el) => observer.observe(el))
+    return () => observer.disconnect()
+  }, [room.id, isAgreed, isReceiver, localMessages])
 
   // Supabase Realtime: INSERT + UPDATE(read_at)
   useEffect(() => {
@@ -388,7 +420,7 @@ export function ChatRoomClient({ room, messages, currentUserId, otherNickname, o
       )}
 
       {/* 메시지 목록: 스크롤만, 우측 여백 최소화(말풍선 붙임), 하단 여백 = 입력창+네비 (BottomNav 위 고정) */}
-      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide pl-4 pr-1 py-4 pb-40 space-y-3">
+      <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto scrollbar-hide pl-4 pr-1 py-4 pb-40 space-y-3">
         {localMessages.length === 0 && isAgreed && (
           <p className="text-center text-text-muted text-sm py-8">
             대화를 시작해보세요
@@ -414,9 +446,15 @@ export function ChatRoomClient({ room, messages, currentUserId, otherNickname, o
           const prevMsg = index > 0 ? localMessages[index - 1] : null
           const prevDate = prevMsg?.created_at ? new Date(prevMsg.created_at).toDateString() : ''
           const showDateDivider = index === firstUserMsgIndex || msgDate !== prevDate
+          // 상대 메시지만 읽음 관찰 대상 (이 블록에는 system 이미 제외됨)
+          const isOtherMessage = !isMine
 
           return (
-            <div key={msg.id} className="space-y-1">
+            <div
+              key={msg.id}
+              className="space-y-1"
+              {...(isOtherMessage ? { 'data-read-message-id': msg.id } : {})}
+            >
               {showDateDivider && (
                 <div className="flex justify-center py-2">
                   <span className="px-3 py-1 rounded-full bg-surface-750/80 text-text-muted text-[11px]">
@@ -458,19 +496,33 @@ export function ChatRoomClient({ room, messages, currentUserId, otherNickname, o
                       '삭제된 메시지입니다'
                     ) : (msg.image_url || msg.message_type === 'image') ? (
                       <div className="space-y-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setLightboxImageUrl(msg.image_url!)}
-                          className="block rounded-xl overflow-hidden bg-surface-800 w-full text-left"
-                          aria-label="이미지 크게 보기"
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={msg.image_url!}
-                            alt=""
-                            className="w-full max-h-64 object-cover"
-                          />
-                        </button>
+                        {failedImageIds.has(msg.id) ? (
+                          <div className="flex flex-col items-center justify-center gap-1 rounded-xl bg-surface-800 w-full min-h-[120px] text-text-muted py-4">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                              <circle cx="8.5" cy="8.5" r="1.5" />
+                              <polyline points="21 15 16 10 5 21" />
+                            </svg>
+                            <span className="text-[10px]">이미지를 불러올 수 없습니다</span>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setLightboxImageUrl(msg.image_url!)}
+                            className="block rounded-xl overflow-hidden bg-surface-800 w-full text-left"
+                            aria-label="이미지 크게 보기"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={msg.image_url!}
+                              alt=""
+                              className="w-full max-h-64 object-cover"
+                              loading="lazy"
+                              decoding="async"
+                              onError={() => setFailedImageIds((prev) => new Set(prev).add(msg.id))}
+                            />
+                          </button>
+                        )}
                         {msg.content?.trim() ? <p className="break-words text-sm leading-relaxed">{msg.content}</p> : null}
                       </div>
                     ) : (
@@ -534,6 +586,12 @@ export function ChatRoomClient({ room, messages, currentUserId, otherNickname, o
                     alt="미리보기"
                     className="w-full h-full object-cover"
                   />
+                  {isUploadingImage && (
+                    <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-1.5">
+                      <span className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span className="text-white text-[10px] font-medium">업로드 중</span>
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={clearPendingImage}
@@ -550,16 +608,18 @@ export function ChatRoomClient({ room, messages, currentUserId, otherNickname, o
                   </button>
                 </div>
                 <textarea
+                  ref={captionTextareaRef}
                   value={msgText}
                   onChange={(e) => setMsgText(e.target.value)}
                   placeholder="메시지를 입력하세요 (선택)"
                   rows={1}
                   maxLength={1000}
-                  className="flex-1 bg-surface-750 text-text-primary text-sm px-4 py-3
+                  className="flex-1 bg-surface-750 text-text-primary text-base px-4 py-3
                              rounded-2xl border border-surface-700/50 resize-none
                              placeholder:text-text-muted focus:outline-none
                              focus:border-surface-600 transition-colors"
-                  style={{ maxHeight: 80, overflowY: 'auto' }}
+                  style={{ maxHeight: 80, overflowY: 'auto', fontSize: 16 }}
+                  onTouchEnd={focusCaptionInput}
                 />
                 <button
                   type="button"
@@ -593,7 +653,14 @@ export function ChatRoomClient({ room, messages, currentUserId, otherNickname, o
               </p>
             </div>
           ) : (
-            <div className="px-4 py-3 flex items-end gap-2">
+            <div
+              className="px-4 py-3 flex items-end gap-2"
+              onClick={(e) => {
+                if ((e.target as HTMLElement).closest('button')) return
+                focusMainInput()
+              }}
+              role="presentation"
+            >
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -608,6 +675,7 @@ export function ChatRoomClient({ room, messages, currentUserId, otherNickname, o
                 </svg>
               </button>
               <textarea
+                ref={mainTextareaRef}
                 value={msgText}
                 onChange={(e) => setMsgText(e.target.value)}
                 onKeyDown={(e) => {
@@ -616,14 +684,18 @@ export function ChatRoomClient({ room, messages, currentUserId, otherNickname, o
                     handleSend()
                   }
                 }}
+                onTouchEnd={focusMainInput}
+                onClick={focusMainInput}
+                onFocus={() => setMainInputUnlocked(true)}
+                readOnly={!mainInputUnlocked}
                 placeholder="메시지 입력..."
                 rows={1}
                 maxLength={1000}
-                className="flex-1 bg-surface-750 text-text-primary text-sm px-4 py-3
+                className="flex-1 bg-surface-750 text-text-primary text-base px-4 py-3
                            rounded-2xl border border-surface-700/50 resize-none
                            placeholder:text-text-muted focus:outline-none
                            focus:border-surface-600 transition-colors"
-                style={{ maxHeight: 120, overflowY: 'auto' }}
+                style={{ maxHeight: 120, overflowY: 'auto', fontSize: 16 }}
               />
               <button
                 onClick={() => handleSend()}

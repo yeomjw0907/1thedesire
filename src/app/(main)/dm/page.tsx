@@ -8,23 +8,13 @@ import type { ChatRoomStatus } from '@/types'
  * DM 목록 화면
  * 기준 문서: home-centered-ia-v0.1.md, home-centered-page-structure-v0.1.md §2
  *
- * 탭: 전체 / 응답대기 / 요청
- * - 전체: 내가 보낸 + 받은 + 진행 중인 대화 전부
- * - 응답대기: 내가 보낸 DM 중 상대 응답이 없는 건 (initiator_id === me && status === pending)
- * - 요청: 나에게 온 신규 요청 (receiver_id === me && status === pending)
+ * 전체 목록만 표시 (DM 보내기 시 즉시 agreed 생성으로 응답대기/요청 탭 제거)
  */
-export default async function DmListPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ tab?: string }>
-}) {
+export default async function DmListPage() {
   const supabase = await createServerClient()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
-
-  const { tab } = await searchParams
-  const activeTab = tab === 'unread' ? 'unread' : tab === 'requests' ? 'requests' : 'all'
 
   // 전체 내 채팅방 조회
   const { data: allRooms } = await supabase
@@ -45,63 +35,23 @@ export default async function DmListPage({
 
   const rooms = (allRooms ?? []) as unknown as ChatRoom[]
 
-  // 탭별 필터링
-  let filteredRooms: ChatRoom[]
-  if (activeTab === 'unread') {
-    // 응답대기 = 내가 보낸 DM 중 상대가 아직 수락하지 않은 건 (내가 initiator인 pending)
-    filteredRooms = rooms.filter(
-      (r) => r.status === 'pending' && r.initiator_id === user.id
-    )
-  } else if (activeTab === 'requests') {
-    // 요청 = 나에게 온 신규 요청 (내가 receiver인 pending)
-    filteredRooms = rooms.filter(
-      (r) => r.status === 'pending' && r.receiver_id === user.id
-    )
-  } else {
-    // 전체
-    filteredRooms = rooms
-  }
-
-  // 응답대기 탭 배지용 카운트 (내가 보낸 대기 중)
-  const unreadCount = rooms.filter(
-    (r) => r.status === 'pending' && r.initiator_id === user.id
-  ).length
-
-  // 요청 탭 배지용 카운트 (나에게 온 대기 중)
-  const requestCount = rooms.filter(
-    (r) => r.status === 'pending' && r.receiver_id === user.id
-  ).length
-
   return (
     <div className="flex flex-col min-h-full overscroll-y-contain">
       {/* 헤더 */}
       <header className="sticky top-0 z-10 bg-bg-900/95 backdrop-blur-sm
                          border-b border-surface-700 px-5 pt-4 pb-3">
-        <h1 className="text-text-strong text-lg font-semibold tracking-tight mb-3">
+        <h1 className="text-text-strong text-lg font-semibold tracking-tight">
           DM
         </h1>
-
-        {/* 탭 */}
-        <div className="flex gap-1">
-          <TabLink href="/dm" active={activeTab === 'all'}>
-            전체
-          </TabLink>
-          <TabLink href="/dm?tab=unread" active={activeTab === 'unread'} badge={unreadCount > 0 ? unreadCount : undefined}>
-            응답대기
-          </TabLink>
-          <TabLink href="/dm?tab=requests" active={activeTab === 'requests'} badge={requestCount > 0 ? requestCount : undefined}>
-            요청
-          </TabLink>
-        </div>
       </header>
 
       {/* 목록 — PullToRefresh가 목록만 감싸서 인디케이터가 헤더 아래에 표시됨 */}
       <PullToRefresh>
       <div className="flex-1 px-4 py-4 space-y-2">
-        {filteredRooms.length === 0 ? (
-          <EmptyState tab={activeTab} />
+        {rooms.length === 0 ? (
+          <EmptyState />
         ) : (
-          filteredRooms.map((room) => {
+          rooms.map((room) => {
             const initiator = room.initiator as UserStub | null
             const receiver = room.receiver as UserStub | null
             const isSender = initiator?.id === user.id
@@ -175,34 +125,6 @@ type ChatRoom = {
 // Components
 // ─────────────────────────────────────────────
 
-function TabLink({
-  href,
-  active,
-  badge,
-  children,
-}: {
-  href: string
-  active: boolean
-  badge?: number
-  children: React.ReactNode
-}) {
-  return (
-    <Link
-      href={href}
-      className={`relative px-4 py-1.5 rounded-chip text-sm font-medium transition-colors duration-150
-                 ${active ? 'bg-desire-500/15 text-desire-400' : 'text-text-muted'}`}
-    >
-      {children}
-      {badge !== undefined && (
-        <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-desire-500
-                         text-white text-[10px] flex items-center justify-center font-bold">
-          {badge > 9 ? '9+' : badge}
-        </span>
-      )}
-    </Link>
-  )
-}
-
 function StatusBadge({ status, isSender }: { status: ChatRoomStatus; isSender: boolean }) {
   const configs: Record<ChatRoomStatus, { label: string; className: string }> = {
     pending: {
@@ -250,17 +172,11 @@ function ExpiryText({ expiresAt }: { expiresAt: string }) {
   return <span>{mins}분 남음</span>
 }
 
-function EmptyState({ tab }: { tab: string }) {
-  const messages: Record<string, { title: string; sub: string }> = {
-    all: { title: 'DM이 아직 없습니다', sub: '홈에서 마음에 드는 글에 DM을 보내보세요' },
-    unread: { title: '응답 대기 중인 DM이 없습니다', sub: '내가 보낸 DM 중 상대가 아직 수락하지 않은 건이 여기 표시됩니다' },
-    requests: { title: '받은 요청이 없습니다', sub: '나에게 온 새로운 DM 요청이 여기 표시됩니다' },
-  }
-  const msg = messages[tab] ?? messages.all
+function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
-      <p className="text-text-muted text-base mb-2">{msg.title}</p>
-      {msg.sub && <p className="text-text-muted text-sm">{msg.sub}</p>}
+      <p className="text-text-muted text-base mb-2">DM이 아직 없습니다</p>
+      <p className="text-text-muted text-sm">홈에서 마음에 드는 글에 DM을 보내보세요</p>
     </div>
   )
 }

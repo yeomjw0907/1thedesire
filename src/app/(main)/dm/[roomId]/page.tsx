@@ -56,7 +56,7 @@ export default async function ChatRoomPage({
 
   const messagesPromise = supabase
     .from('messages')
-    .select('id, sender_id, content, message_type, message_status, created_at, image_url')
+    .select('id, sender_id, content, message_type, message_status, created_at, image_url, read_at')
     .eq('room_id', roomId)
     .order('created_at', { ascending: true })
     .limit(200)
@@ -85,12 +85,11 @@ export default async function ChatRoomPage({
   }
 
   return (
-    <PullToRefresh>
-      <div className="flex flex-col flex-1 min-h-0 overscroll-y-contain">
-        {/* 헤더 */}
-        <header className="flex items-center gap-3 px-4 pt-4 pb-3
-                         border-b border-surface-700/60 bg-bg-900/95
-                         backdrop-blur-sm flex-shrink-0">
+    <div className="flex flex-col flex-1 min-h-0">
+      {/* 헤더: 고정 — 스크롤해도 상단 유지 */}
+      <header className="sticky top-0 z-10 flex-shrink-0 flex items-center gap-3 px-4 pt-4 pb-3
+                       border-b border-surface-700/60 bg-bg-900/95
+                       backdrop-blur-sm">
         <Link
           href="/dm"
           className="text-text-muted active:text-text-secondary transition-colors p-1 -ml-1 flex-shrink-0"
@@ -100,7 +99,6 @@ export default async function ChatRoomPage({
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
         </Link>
-        {/* 상대 아바타 */}
         <div className="w-9 h-9 rounded-full bg-surface-700 border border-surface-600 flex-shrink-0 overflow-hidden flex items-center justify-center text-text-muted text-sm font-medium">
           {otherAvatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -126,9 +124,11 @@ export default async function ChatRoomPage({
         />
       </header>
 
-      {/* 채팅 영역: 남는 높이만 사용해 입력창이 항상 보이게 */}
+      {/* 채팅 영역: PullToRefresh는 메시지 영역만 감싸고, 헤더는 밖에 있어 고정됨 */}
       <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-        <ChatRoomClient
+        <PullToRefresh>
+          <div className="flex flex-col flex-1 min-h-0 overscroll-y-contain">
+            <ChatRoomClient
           room={{
             id: room.id,
             status: room.status as ChatRoomStatus,
@@ -150,10 +150,11 @@ export default async function ChatRoomPage({
           otherNickname={otherNickname}
           otherAvatarUrl={otherAvatarUrl}
           roomReported={roomReported}
-        />
+            />
+          </div>
+        </PullToRefresh>
       </div>
-      </div>
-    </PullToRefresh>
+    </div>
   )
 }
 

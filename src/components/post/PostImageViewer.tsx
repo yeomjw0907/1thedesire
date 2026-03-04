@@ -8,6 +8,43 @@ interface Props {
   src2?: string | null
 }
 
+function ImageWithFallback({
+  src,
+  alt,
+  className,
+  loading = 'lazy',
+}: {
+  src: string
+  alt: string
+  className: string
+  loading?: 'lazy' | 'eager'
+}) {
+  const [error, setError] = useState(false)
+  if (error) {
+    return (
+      <div className={`flex flex-col items-center justify-center gap-1 bg-surface-800 text-text-muted ${className}`}>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+          <circle cx="8.5" cy="8.5" r="1.5" />
+          <polyline points="21 15 16 10 5 21" />
+        </svg>
+        <span className="text-[10px]">이미지를 불러올 수 없습니다</span>
+      </div>
+    )
+  }
+  return (
+    /* eslint-disable-next-line @next/next/no-img-element */
+    <img
+      src={src}
+      alt={alt}
+      className={className}
+      loading={loading}
+      decoding="async"
+      onError={() => setError(true)}
+    />
+  )
+}
+
 export function PostImageViewer({ src, src2 }: Props) {
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
@@ -44,14 +81,13 @@ export function PostImageViewer({ src, src2 }: Props) {
               key={i}
               type="button"
               onClick={() => setLightboxSrc(imgSrc)}
-              className="active:opacity-70 transition-opacity"
+              className="active:opacity-70 transition-opacity w-full aspect-square overflow-hidden bg-surface-800"
               aria-label={`이미지 ${i + 1} 크게 보기`}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <ImageWithFallback
                 src={imgSrc}
                 alt=""
-                className="w-full aspect-square object-cover opacity-80"
+                className="w-full h-full object-cover opacity-80"
               />
             </button>
           ))}
@@ -61,11 +97,10 @@ export function PostImageViewer({ src, src2 }: Props) {
         <button
           type="button"
           onClick={() => setLightboxSrc(src)}
-          className="w-full mt-3 block active:opacity-70 transition-opacity"
+          className="w-full mt-3 block active:opacity-70 transition-opacity text-left"
           aria-label="이미지 크게 보기"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <ImageWithFallback
             src={src}
             alt=""
             className="w-full max-h-52 object-cover rounded-2xl opacity-80"
@@ -89,6 +124,7 @@ export function PostImageViewer({ src, src2 }: Props) {
             alt=""
             className="max-w-full max-h-[88vh] object-contain rounded-xl"
             onClick={(e) => e.stopPropagation()}
+            onError={() => setLightboxSrc(null)}
           />
 
           {/* 닫기 버튼 */}
