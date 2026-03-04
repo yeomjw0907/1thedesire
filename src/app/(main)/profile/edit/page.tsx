@@ -15,7 +15,7 @@ export default async function ProfileEditPage() {
     .eq('id', user.id)
     .single()
 
-  if (!profile) redirect('/signup')
+  if (!profile) redirect('/profile')
 
   return (
     <div className="flex flex-col min-h-full pb-8">

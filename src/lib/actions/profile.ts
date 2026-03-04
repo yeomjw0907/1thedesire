@@ -97,24 +97,44 @@ export async function updateProfile(
   redirect('/profile')
 }
 
-/** 프로필 아바타 URL만 DB에 반영 (스토리지 업로드는 클라이언트에서 완료 후 URL 전달) */
-export async function updateProfileAvatarUrl(avatarUrl: string): Promise<ApiResponse> {
+const AVATAR_MAX_SIZE_MB = 15
+const AVATAR_ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+
+/** 프로필 아바타: 서버에서 파일 업로드 + DB 반영 (세션 일관성 보장) */
+export async function uploadProfileAvatar(formData: FormData): Promise<ApiResponse<{ avatar_url: string }>> {
   const supabase = await createServerClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) {
     return { success: false, data: null, error: { code: 'UNAUTHORIZED', message: '로그인이 필요합니다' } }
   }
-  const url = avatarUrl?.trim()
-  if (!url) {
-    return { success: false, data: null, error: { code: 'INVALID_INPUT', message: 'URL이 없습니다' } }
+  const file = formData.get('avatar') as File | null
+  if (!file?.size) {
+    return { success: false, data: null, error: { code: 'INVALID_INPUT', message: '이미지를 선택해주세요' } }
   }
-  const { error } = await supabase
+  if (!AVATAR_ALLOWED_TYPES.includes(file.type)) {
+    return { success: false, data: null, error: { code: 'INVALID_TYPE', message: 'JPG, PNG, WEBP만 업로드할 수 있습니다.' } }
+  }
+  if (file.size > AVATAR_MAX_SIZE_MB * 1024 * 1024) {
+    return { success: false, data: null, error: { code: 'TOO_LARGE', message: `파일 크기는 ${AVATAR_MAX_SIZE_MB}MB 이하여야 합니다.` } }
+  }
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
+  const path = `${user.id}/${Date.now()}.${ext}`
+
+  const { error: uploadErr } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
+  if (uploadErr) {
+    console.error('[uploadProfileAvatar] storage', uploadErr)
+    return { success: false, data: null, error: { code: 'UPLOAD_FAILED', message: '이미지 업로드에 실패했습니다.' } }
+  }
+  const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
+
+  const { error: dbErr } = await supabase
     .from('profiles')
-    .update({ avatar_url: url })
+    .update({ avatar_url: publicUrl })
     .eq('id', user.id)
-  if (error) {
-    console.error('[updateProfileAvatarUrl]', error)
+  if (dbErr) {
+    console.error('[uploadProfileAvatar] db', dbErr)
+    await supabase.storage.from('avatars').remove([path])
     return { success: false, data: null, error: { code: 'DB_ERROR', message: '프로필 이미지를 저장하는 데 실패했습니다.' } }
   }
-  return { success: true, data: null, error: null }
+  return { success: true, data: { avatar_url: publicUrl }, error: null }
 }

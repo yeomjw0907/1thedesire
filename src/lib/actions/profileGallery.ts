@@ -4,7 +4,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import type { ApiResponse } from '@/types'
 
 const BUCKET = 'avatars'
-const MAX_SIZE_MB = 5
+const MAX_SIZE_MB = 15
 const ALLOWED_MIMES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
 const GALLERY_KEYS = ['gallery_url_1', 'gallery_url_2', 'gallery_url_3', 'gallery_url_4', 'gallery_url_5'] as const
 

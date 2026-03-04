@@ -1,8 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { updateProfileAvatarUrl } from '@/lib/actions/profile'
+import { uploadProfileAvatar } from '@/lib/actions/profile'
 
 interface Props {
   userId: string
@@ -10,11 +9,10 @@ interface Props {
   currentAvatarUrl?: string | null
 }
 
-const BUCKET = 'avatars'
-const MAX_SIZE_MB = 5
+const MAX_SIZE_MB = 15
 const ALLOWED = ['image/jpeg', 'image/png', 'image/webp']
 
-export function AvatarUploadButton({ userId, nickname, currentAvatarUrl }: Props) {
+export function AvatarUploadButton({ userId: _userId, nickname, currentAvatarUrl }: Props) {
   const [avatarUrl, setAvatarUrl] = useState(currentAvatarUrl ?? null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -37,29 +35,16 @@ export function AvatarUploadButton({ userId, nickname, currentAvatarUrl }: Props
     setUploading(true)
 
     try {
-      const supabase = createClient()
-      const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
-      const path = `${userId}/${Date.now()}.${ext}`
-
-      const { error: uploadErr } = await supabase.storage
-        .from(BUCKET)
-        .upload(path, file, { upsert: true })
-
-      if (uploadErr) throw uploadErr
-
-      const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(path)
-
-      const result = await updateProfileAvatarUrl(publicUrl)
+      const formData = new FormData()
+      formData.set('avatar', file)
+      const result = await uploadProfileAvatar(formData)
       if (!result.success) {
-        const { error: removeErr } = await supabase.storage.from(BUCKET).remove([path])
-        if (removeErr) console.error('[AvatarUpload] 고아 파일 cleanup 실패:', path, removeErr)
         throw new Error(result.error?.message ?? '프로필 이미지를 저장하는 데 실패했습니다.')
       }
-
-      setAvatarUrl(publicUrl)
+      if (result.data?.avatar_url) setAvatarUrl(result.data.avatar_url)
     } catch (err) {
       console.error('[AvatarUpload]', err)
-      setError('업로드에 실패했습니다.')
+      setError(err instanceof Error ? err.message : '업로드에 실패했습니다.')
     } finally {
       setUploading(false)
     }
