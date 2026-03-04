@@ -5,7 +5,6 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { AdminUserActions } from '@/components/admin/AdminUserActions'
 import { AdminPostActions } from '@/components/admin/AdminPostActions'
 import { AdminChargeActions } from '@/components/admin/AdminChargeActions'
-import { AdminLogoutButton } from '@/components/admin/AdminLogoutButton'
 import type { AccountStatus } from '@/types'
 
 /**
@@ -51,6 +50,7 @@ export default async function AdminPage({
     totalProfilesRes,
     todayLoginRes,
     moderationLogsRes,
+    stiActiveRes,
   ] = await Promise.all([
     admin.from('chat_rooms').select('status'),
     admin.from('reports').select('id, reason, status, created_at, reporter:reporter_id (id, nickname), target:target_user_id (id, nickname, account_status, points)').order('created_at', { ascending: false }).limit(100),
@@ -60,6 +60,7 @@ export default async function AdminPage({
     admin.from('profiles').select('id', { count: 'exact', head: true }),
     admin.rpc('get_today_login_count').maybeSingle(),
     admin.from('moderation_actions').select('id, target_user_id, action_type, reason, created_at, profiles:target_user_id (nickname)').order('created_at', { ascending: false }).limit(50),
+    admin.from('sti_check_submissions').select('id', { count: 'exact', head: true }).in('status', ['pending', 'under_review']),
   ])
 
   const roomStats = roomStatsRes.data
@@ -75,13 +76,35 @@ export default async function AdminPage({
   const todayLogins = (todayLoginRes.data as number | null) ?? 0
   const matchCount = statCounts.agreed ?? 0
   const moderationLogs = moderationLogsRes.data ?? []
+  const stiActiveCount = stiActiveRes.count ?? 0
   const reportsFiltered = (reports ?? []).filter((r) => activeReportFilter === 'all' || r.status === activeReportFilter)
+  const pendingReportsCount = (reports ?? []).filter((r) => r.status === 'pending').length
 
   return (
-    <div className="min-h-screen bg-bg-900 px-4 py-6 pb-10">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-text-strong text-xl font-semibold">어드민</h1>
-        <AdminLogoutButton />
+    <div>
+      {/* 즉시 처리 KPI */}
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        <Link
+          href="/admin?section=charges"
+          className="card text-center border-l-4 border-l-state-warning active:bg-surface-750 transition-colors"
+        >
+          <p className="text-text-strong text-lg font-bold tabular-nums">{pendingCharges.length}</p>
+          <p className="text-text-muted text-xs mt-1">충전 대기</p>
+        </Link>
+        <Link
+          href="/admin?section=reports&reportStatus=pending"
+          className="card text-center border-l-4 border-l-state-warning active:bg-surface-750 transition-colors"
+        >
+          <p className="text-text-strong text-lg font-bold tabular-nums">{pendingReportsCount}</p>
+          <p className="text-text-muted text-xs mt-1">미처리 신고</p>
+        </Link>
+        <Link
+          href="/admin/sti?filter=active"
+          className="card text-center border-l-4 border-l-state-warning active:bg-surface-750 transition-colors"
+        >
+          <p className="text-text-strong text-lg font-bold tabular-nums">{stiActiveCount}</p>
+          <p className="text-text-muted text-xs mt-1">STI 처리 대기</p>
+        </Link>
       </div>
 
       {/* 요약 통계 */}
@@ -125,11 +148,18 @@ export default async function AdminPage({
                    active:bg-surface-750 transition-colors"
       >
         <span className="text-text-secondary text-sm font-medium">최근검사 확인 검수</span>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-          className="text-text-muted">
-          <polyline points="9 18 15 12 9 6" />
-        </svg>
+        <div className="flex items-center gap-2">
+          {stiActiveCount > 0 && (
+            <span className="px-2 py-0.5 rounded-chip text-[11px] font-medium bg-state-warning/15 text-state-warning border border-state-warning/30">
+              대기 {stiActiveCount}건
+            </span>
+          )}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+            className="text-text-muted">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </div>
       </Link>
 
       {/* 섹션 탭: 충전 → 신고 → 유저 → 게시글 → 운영 로그 */}

@@ -63,6 +63,11 @@ export interface Profile {
   role: string
   bio: string
   avatar_url: string | null
+  gallery_url_1?: string | null
+  gallery_url_2?: string | null
+  gallery_url_3?: string | null
+  gallery_url_4?: string | null
+  gallery_url_5?: string | null
   points: number
   gender_benefit_type: GenderBenefitType
   is_adult_checked: boolean

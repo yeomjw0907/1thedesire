@@ -7,6 +7,7 @@ import { MyPostsSection } from '@/components/profile/MyPostsSection'
 import { AvatarUploadButton } from '@/components/profile/AvatarUploadButton'
 import { LogoutButton } from '@/components/profile/LogoutButton'
 import { WithdrawButton } from '@/components/profile/WithdrawButton'
+import { ProfileGallery } from '@/components/profile/ProfileGallery'
 import type { PublicStiBadge } from '@/types/sti'
 import type { MyPostRow } from '@/lib/actions/posts'
 
@@ -134,6 +135,19 @@ export default async function MyProfilePage() {
             </div>
           )}
         </div>
+      </section>
+
+      {/* 프로필 갤러리 (자기소개 위) */}
+      <section className="px-4 mb-3">
+        <ProfileGallery
+          urls={[
+            profile.gallery_url_1 ?? null,
+            profile.gallery_url_2 ?? null,
+            profile.gallery_url_3 ?? null,
+            profile.gallery_url_4 ?? null,
+            profile.gallery_url_5 ?? null,
+          ]}
+        />
       </section>
 
       {/* 자기소개 — 카드 */}

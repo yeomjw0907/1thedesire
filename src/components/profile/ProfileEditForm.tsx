@@ -4,6 +4,7 @@ import { useActionState } from 'react'
 import { updateProfile } from '@/lib/actions/profile'
 import { REGIONS } from '@/lib/constants/signup'
 import { AvatarUploadButton } from '@/components/profile/AvatarUploadButton'
+import { ProfileGalleryEditor } from '@/components/profile/ProfileGalleryEditor'
 import type { ApiResponse, Profile } from '@/types'
 
 const ROLE_OPTIONS = [
@@ -21,7 +22,7 @@ function getRoleDefault(role: string | undefined): string {
 }
 
 interface Props {
-  profile: Pick<Profile, 'id' | 'nickname' | 'gender' | 'age_group' | 'region' | 'role' | 'bio' | 'avatar_url'>
+  profile: Pick<Profile, 'id' | 'nickname' | 'gender' | 'age_group' | 'region' | 'role' | 'bio' | 'avatar_url' | 'gallery_url_1' | 'gallery_url_2' | 'gallery_url_3' | 'gallery_url_4' | 'gallery_url_5'>
 }
 
 export function ProfileEditForm({ profile }: Props) {
@@ -48,6 +49,20 @@ export function ProfileEditForm({ profile }: Props) {
           userId={profile.id}
           nickname={profile.nickname}
           currentAvatarUrl={profile.avatar_url}
+        />
+      </div>
+
+      {/* 프로필 갤러리 */}
+      <div className="space-y-2">
+        <ProfileGalleryEditor
+          userId={profile.id}
+          currentUrls={[
+            profile.gallery_url_1 ?? null,
+            profile.gallery_url_2 ?? null,
+            profile.gallery_url_3 ?? null,
+            profile.gallery_url_4 ?? null,
+            profile.gallery_url_5 ?? null,
+          ]}
         />
       </div>
 

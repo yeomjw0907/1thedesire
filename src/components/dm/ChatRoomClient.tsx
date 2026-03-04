@@ -151,7 +151,9 @@ export function ChatRoomClient({ room, messages, currentUserId, otherNickname, o
           )
         }
       )
-      .subscribe()
+      .subscribe((status, err) => {
+        if (err) console.warn('[Realtime] room channel error:', err?.message ?? err)
+      })
 
     return () => { supabase.removeChannel(channel) }
   }, [room.id, isAgreed, isReceiver, currentUserId])

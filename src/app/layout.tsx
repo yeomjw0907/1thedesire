@@ -1,12 +1,14 @@
 import type { Metadata, Viewport } from 'next'
 import { Toaster } from 'sonner'
 import { FontLoader } from '@/components/FontLoader'
+import { AppWidthContainer } from '@/components/layout/AppWidthContainer'
 import './globals.css'
 
 export const metadata: Metadata = {
   title: '욕망백서',
   description: '분위기를 먼저 보고, 대화는 그 다음에. 취향을 안전하게 나누는 익명 플랫폼.',
   manifest: '/manifest.json',
+  icons: { icon: '/favicon.ico' },
   openGraph: {
     title: '욕망백서',
     description: '분위기를 먼저 보고, 대화는 그 다음에.',
@@ -36,9 +38,7 @@ export default function RootLayout({
       <body className="bg-bg-900 text-text-primary antialiased">
         <FontLoader />
         <link rel="preconnect" href="https://cdn.jsdelivr.net" />
-        <div className="mx-auto max-w-md min-h-screen relative pt-[env(safe-area-inset-top)]">
-          {children}
-        </div>
+        <AppWidthContainer>{children}</AppWidthContainer>
         <Toaster
           position="top-center"
           gap={8}

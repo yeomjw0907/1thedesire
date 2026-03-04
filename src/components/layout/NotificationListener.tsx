@@ -103,7 +103,9 @@ export function NotificationListener({ userId }: Props) {
           })
         }
       )
-      .subscribe()
+      .subscribe((_status, err) => {
+        if (err) console.warn('[Realtime] notifications channel error:', err?.message ?? err)
+      })
 
     // 알림 실시간 구독 (like + charge_completed / charge_rejected)
     const notifChannel = supabase
@@ -151,7 +153,9 @@ export function NotificationListener({ userId }: Props) {
           }
         }
       )
-      .subscribe()
+      .subscribe((_status, err) => {
+        if (err) console.warn('[Realtime] app-notifications channel error:', err?.message ?? err)
+      })
 
     return () => {
       supabase.removeChannel(dmChannel)

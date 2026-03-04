@@ -45,7 +45,7 @@ export default async function AdminStiDetailPage({
   const canProcess = ['pending', 'under_review'].includes(submission.status)
 
   return (
-    <div className="min-h-screen bg-bg-900 px-4 py-6 pb-10">
+    <div>
       <div className="flex items-center justify-between mb-5">
         <Link href="/admin/sti" className="text-text-muted text-sm active:text-text-primary">
           ← 목록

@@ -6,6 +6,7 @@ import { ReportSheet } from '@/components/profile/ReportSheet'
 import { BlockSheet } from '@/components/profile/BlockSheet'
 import { StiVerificationBadge } from '@/components/sti/StiVerificationBadge'
 import { PostImageViewer } from '@/components/post/PostImageViewer'
+import { ProfileGallery } from '@/components/profile/ProfileGallery'
 import type { PublicStiBadge } from '@/types/sti'
 
 export default async function ProfileDetailPage({
@@ -177,6 +178,19 @@ export default async function ProfileDetailPage({
           )}
         </div>
       </div>
+
+      {/* ── 프로필 갤러리 (소개 위) ── */}
+      <section className="px-4 mb-3">
+        <ProfileGallery
+          urls={[
+            profile.gallery_url_1 ?? null,
+            profile.gallery_url_2 ?? null,
+            profile.gallery_url_3 ?? null,
+            profile.gallery_url_4 ?? null,
+            profile.gallery_url_5 ?? null,
+          ]}
+        />
+      </section>
 
       {/* ── 자기소개 ── */}
       {profile.bio && (

@@ -96,7 +96,7 @@ export default async function AdminStiPage({
   const expiringSoon = expiringSoonRes.data
 
   return (
-    <div className="min-h-screen bg-bg-900 px-4 py-6 pb-10">
+    <div>
       <div className="flex items-center justify-between mb-5">
         <h1 className="text-text-strong text-xl font-semibold">최근검사 확인 검수</h1>
         <Link href="/admin" className="text-text-muted text-sm active:text-text-primary">

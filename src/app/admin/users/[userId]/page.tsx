@@ -5,14 +5,26 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { AdminUserActions } from '@/components/admin/AdminUserActions'
 import type { AccountStatus } from '@/types'
 
+const TABS = [
+  { key: 'posts', label: '게시글' },
+  { key: 'reports_target', label: '신고받은 건' },
+  { key: 'reports_reporter', label: '신고한 건' },
+  { key: 'points', label: '포인트' },
+  { key: 'moderation', label: '제재' },
+] as const
+const TAB_KEYS = TABS.map((t) => t.key)
+type TabKey = (typeof TAB_KEYS)[number]
+
 /**
  * 관리자 전용 유저 상세
- * 프로필, 최근 게시글, 신고 이력, 포인트 이력, 제재 이력
+ * 프로필, 최근 게시글, 신고 이력, 포인트 이력, 제재 이력 (탭)
  */
 export default async function AdminUserDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ userId: string }>
+  searchParams: Promise<{ tab?: string }>
 }) {
   const supabase = await createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -29,6 +41,8 @@ export default async function AdminUserDetailPage({
   if (!isDbAdmin && !isEnvAdmin) redirect('/home')
 
   const { userId } = await params
+  const { tab: tabParam } = await searchParams
+  const activeTab: TabKey = TAB_KEYS.includes(tabParam as TabKey) ? (tabParam as TabKey) : 'posts'
   const admin = createAdminClient()
 
   const [profileRes, postsRes, reportsAsTargetRes, reportsAsReporterRes, pointTxRes, moderationRes] = await Promise.all([
@@ -61,7 +75,7 @@ export default async function AdminUserDetailPage({
   }
 
   return (
-    <div className="min-h-screen bg-bg-900 px-4 py-6 pb-10">
+    <div>
       <div className="flex items-center justify-between mb-4">
         <Link href="/admin?section=users" className="text-text-muted active:text-text-primary text-sm">
           ← 유저 목록
@@ -105,114 +119,138 @@ export default async function AdminUserDetailPage({
         />
       </div>
 
-      {/* 최근 게시글 */}
-      <section className="mb-4">
-        <h2 className="text-text-muted text-[11px] font-medium tracking-widest uppercase mb-2">
-          최근 게시글 ({posts.length})
-        </h2>
-        {posts.length === 0 ? (
-          <p className="text-text-muted text-sm px-1">게시글이 없습니다</p>
-        ) : (
-          <div className="space-y-2">
-            {posts.map((post) => (
-              <div key={post.id} className="card py-2">
-                <p className="text-text-muted text-[10px]">{formatDate(post.created_at)} · {post.status}</p>
-                <p className="text-text-primary text-sm line-clamp-2 mt-0.5">{post.content}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+      {/* 탭 */}
+      <div className="flex gap-1 mb-4 border-b border-surface-700/40 pb-3 overflow-x-auto">
+        {TABS.map(({ key, label }) => (
+          <Link
+            key={key}
+            href={`/admin/users/${userId}?tab=${key}`}
+            className={`px-3 py-1.5 rounded-chip text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0
+              ${activeTab === key ? 'bg-desire-500/15 text-desire-400' : 'text-text-muted'}`}
+          >
+            {label}
+          </Link>
+        ))}
+      </div>
 
-      {/* 신고 이력 (대상) */}
-      <section className="mb-4">
-        <h2 className="text-text-muted text-[11px] font-medium tracking-widest uppercase mb-2">
-          이 유저를 신고한 건 ({reportsAsTarget.length})
-        </h2>
-        {reportsAsTarget.length === 0 ? (
-          <p className="text-text-muted text-sm px-1">없음</p>
-        ) : (
-          <div className="space-y-2">
-            {reportsAsTarget.map((r) => {
-              const reporter = r.reporter as unknown as { id: string; nickname: string } | null
-              return (
-                <div key={r.id} className="card py-2">
-                  <p className="text-text-primary text-xs">
-                    {reporter?.nickname ?? '?'} → {r.status} · {formatDate(r.created_at)}
-                  </p>
-                  <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{r.reason}</p>
+      {/* 탭 패널: 게시글 */}
+      {activeTab === 'posts' && (
+        <section>
+          <h2 className="text-text-muted text-[11px] font-medium tracking-widest uppercase mb-2">
+            최근 게시글 ({posts.length})
+          </h2>
+          {posts.length === 0 ? (
+            <p className="text-text-muted text-sm px-1">게시글이 없습니다</p>
+          ) : (
+            <div className="space-y-2">
+              {posts.map((post) => (
+                <div key={post.id} className="card py-2">
+                  <p className="text-text-muted text-[10px]">{formatDate(post.created_at)} · {post.status}</p>
+                  <p className="text-text-primary text-sm line-clamp-2 mt-0.5">{post.content}</p>
                 </div>
-              )
-            })}
-          </div>
-        )}
-      </section>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
-      {/* 신고 이력 (신고자) */}
-      <section className="mb-4">
-        <h2 className="text-text-muted text-[11px] font-medium tracking-widest uppercase mb-2">
-          이 유저가 신고한 건 ({reportsAsReporter.length})
-        </h2>
-        {reportsAsReporter.length === 0 ? (
-          <p className="text-text-muted text-sm px-1">없음</p>
-        ) : (
-          <div className="space-y-2">
-            {reportsAsReporter.map((r) => {
-              const target = r.target as unknown as { id: string; nickname: string } | null
-              return (
-                <div key={r.id} className="card py-2">
-                  <p className="text-text-primary text-xs">
-                    → {target?.nickname ?? '?'} · {r.status} · {formatDate(r.created_at)}
-                  </p>
-                  <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{r.reason}</p>
+      {/* 탭 패널: 신고받은 건 */}
+      {activeTab === 'reports_target' && (
+        <section>
+          <h2 className="text-text-muted text-[11px] font-medium tracking-widest uppercase mb-2">
+            이 유저를 신고한 건 ({reportsAsTarget.length})
+          </h2>
+          {reportsAsTarget.length === 0 ? (
+            <p className="text-text-muted text-sm px-1">없음</p>
+          ) : (
+            <div className="space-y-2">
+              {reportsAsTarget.map((r) => {
+                const reporter = r.reporter as unknown as { id: string; nickname: string } | null
+                return (
+                  <div key={r.id} className="card py-2">
+                    <p className="text-text-primary text-xs">
+                      {reporter?.nickname ?? '?'} → {r.status} · {formatDate(r.created_at)}
+                    </p>
+                    <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{r.reason}</p>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* 탭 패널: 신고한 건 */}
+      {activeTab === 'reports_reporter' && (
+        <section>
+          <h2 className="text-text-muted text-[11px] font-medium tracking-widest uppercase mb-2">
+            이 유저가 신고한 건 ({reportsAsReporter.length})
+          </h2>
+          {reportsAsReporter.length === 0 ? (
+            <p className="text-text-muted text-sm px-1">없음</p>
+          ) : (
+            <div className="space-y-2">
+              {reportsAsReporter.map((r) => {
+                const target = r.target as unknown as { id: string; nickname: string } | null
+                return (
+                  <div key={r.id} className="card py-2">
+                    <p className="text-text-primary text-xs">
+                      → {target?.nickname ?? '?'} · {r.status} · {formatDate(r.created_at)}
+                    </p>
+                    <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{r.reason}</p>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* 탭 패널: 포인트 */}
+      {activeTab === 'points' && (
+        <section>
+          <h2 className="text-text-muted text-[11px] font-medium tracking-widest uppercase mb-2">
+            포인트 이력 ({pointTxs.length})
+          </h2>
+          {pointTxs.length === 0 ? (
+            <p className="text-text-muted text-sm px-1">없음</p>
+          ) : (
+            <div className="space-y-1">
+              {pointTxs.map((tx) => (
+                <div key={tx.id} className="flex justify-between items-center py-1.5 border-b border-surface-700/30 text-xs">
+                  <span className="text-text-secondary">
+                    {tx.type} {tx.amount > 0 ? `+${tx.amount}` : tx.amount}P
+                  </span>
+                  <span className="text-text-muted">{formatDate(tx.created_at)}</span>
                 </div>
-              )
-            })}
-          </div>
-        )}
-      </section>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
-      {/* 포인트 이력 */}
-      <section className="mb-4">
-        <h2 className="text-text-muted text-[11px] font-medium tracking-widest uppercase mb-2">
-          포인트 이력 ({pointTxs.length})
-        </h2>
-        {pointTxs.length === 0 ? (
-          <p className="text-text-muted text-sm px-1">없음</p>
-        ) : (
-          <div className="space-y-1">
-            {pointTxs.map((tx) => (
-              <div key={tx.id} className="flex justify-between items-center py-1.5 border-b border-surface-700/30 text-xs">
-                <span className="text-text-secondary">
-                  {tx.type} {tx.amount > 0 ? `+${tx.amount}` : tx.amount}P
-                </span>
-                <span className="text-text-muted">{formatDate(tx.created_at)}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* 제재 이력 */}
-      <section>
-        <h2 className="text-text-muted text-[11px] font-medium tracking-widest uppercase mb-2">
-          제재 이력 ({moderationActions.length})
-        </h2>
-        {moderationActions.length === 0 ? (
-          <p className="text-text-muted text-sm px-1">없음</p>
-        ) : (
-          <div className="space-y-2">
-            {moderationActions.map((log) => (
-              <div key={log.id} className="card py-2">
-                <p className="text-text-primary text-xs">
-                  {log.action_type} · {formatDate(log.created_at)}
-                </p>
-                {log.reason && <p className="text-text-secondary text-xs mt-0.5">{log.reason}</p>}
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+      {/* 탭 패널: 제재 */}
+      {activeTab === 'moderation' && (
+        <section>
+          <h2 className="text-text-muted text-[11px] font-medium tracking-widest uppercase mb-2">
+            제재 이력 ({moderationActions.length})
+          </h2>
+          {moderationActions.length === 0 ? (
+            <p className="text-text-muted text-sm px-1">없음</p>
+          ) : (
+            <div className="space-y-2">
+              {moderationActions.map((log) => (
+                <div key={log.id} className="card py-2">
+                  <p className="text-text-primary text-xs">
+                    {log.action_type} · {formatDate(log.created_at)}
+                  </p>
+                  {log.reason && <p className="text-text-secondary text-xs mt-0.5">{log.reason}</p>}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
     </div>
   )
 }

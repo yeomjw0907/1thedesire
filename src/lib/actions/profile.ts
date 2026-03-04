@@ -19,6 +19,11 @@ export async function withdrawAccount(): Promise<ApiResponse> {
       nickname: null,
       bio: null,
       avatar_url: null,
+      gallery_url_1: null,
+      gallery_url_2: null,
+      gallery_url_3: null,
+      gallery_url_4: null,
+      gallery_url_5: null,
       role: null,
       withdrawn_at: new Date().toISOString(),
     })

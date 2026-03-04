@@ -41,12 +41,10 @@ export default async function LoginPage({
       {/* 로고 영역 */}
       <div className="flex-1 flex flex-col justify-center">
         <div className="mb-16">
-          <p className="text-text-muted text-sm font-medium tracking-widest mb-3 uppercase">
+          <p className="text-text-muted text-sm font-medium tracking-widest uppercase mb-3">
             Desire Ledger
           </p>
-          <h1 className="text-text-strong font-bold text-4xl leading-tight mb-4">
-            욕망백서
-          </h1>
+          <img src="/logo-login.svg" alt="욕망백서" className="h-10 w-auto max-w-[200px] mb-4" />
           <p className="text-text-primary text-lg leading-relaxed">
             분위기를 먼저 보고,<br />대화는 그 다음에
           </p>
