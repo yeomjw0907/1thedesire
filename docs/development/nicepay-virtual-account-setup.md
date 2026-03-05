@@ -3,14 +3,37 @@
 **실서비스 도메인**: `1thedesire.com`  
 **키**: NICE페이 키는 이미 env에 설정되어 있음 (참고용).
 
+**구현 기준**: NICE페이 공식 **시작하기(Quick guide)** — **Server 승인 모델 / Basic 인증** 기준으로 맞춤.  
+(결제창 JS SDK → returnUrl POST → 승인 API `POST /v1/payments/{tid}`, Authorization: Basic Base64(clientKey:secretKey))
+
+---
+
+## 0. NICE페이 Quick guide 요약 (참고)
+
+- **결제창**: `pay.nicepay.co.kr/v1/js/` JS SDK, `AUTHNICE.requestPay({ clientId, method, orderId, amount, goodsName, returnUrl, fnError })`  
+  → 결제 후 **returnUrl**로 POST (application/x-www-form-urlencoded).  
+  → `authResultCode: '0000'` 이면 인증 성공, **tid**를 승인 API로 전달.
+- **승인 API**: `POST https://sandbox-api.nicepay.co.kr/v1/payments/{tid}` (테스트) / `https://api.nicepay.co.kr/v1/payments/{tid}` (운영)  
+  Header: `Authorization: Basic Base64(clientKey:secretKey)`, Body: `{ "amount": 금액 }`.  
+  응답 `resultCode: "0000"`, `status: "paid"` 이면 결제 완료.
+- **개발정보**: 로그인 후 **개발정보** 탭에서 KEY(Client-key, Secret-key), **웹훅** 추가/삭제, **TEST 호출**, **로그** 확인.
+- **웹훅**: “유효한 도메인” 등록 후 **TEST 호출** 버튼으로 End-point가 **정상 응답(200)** 하는지 반드시 확인.  
+  발송 시점: 결제(승인) 시, 가상계좌 채번 시, **가상계좌 입금 시**, 취소 시.
+
 ---
 
 ## 1. 현재 구현 요약
 
-### 1.1 연동 범위
+### 1.1 연동 범위 (Quick guide와 일치)
 
-- **카드 결제**: 결제창(JS SDK) → 인증 후 `/api/payment/nicepay/return`에서 Server 승인 → `approve_charge_atomic`으로 포인트 충전 완료.
-- **가상계좌**: 가상계좌 발급 요청 → 입금 시 NICE페이가 **입금 통보(웹훅)**으로 `/api/payment/nicepay/webhook` 호출 → `approve_charge_atomic`으로 포인트 충전 완료.
+- **카드 결제**:  
+  결제창 `AUTHNICE.requestPay({ clientId, method: 'card', orderId, amount, goodsName, returnUrl })`  
+  → NICE가 **returnUrl**로 POST (authResultCode, tid, orderId, amount 등)  
+  → 우리 **return** 핸들러에서 `authResultCode === '0000'` 검증 후 **승인 API** `POST /v1/payments/{tid}` (Basic 인증, body `{ amount }`) 호출  
+  → 성공 시 `approve_charge_atomic`으로 포인트 충전 완료.
+- **가상계좌**:  
+  가상계좌 발급 요청 후, 입금 시 NICE가 **웹훅**으로 `/api/payment/nicepay/webhook` 호출  
+  → `approve_charge_atomic`으로 포인트 충전 완료. (웹훅 발송 시점: 가상계좌 입금 시)
 
 ### 1.2 관련 파일
 
@@ -56,16 +79,19 @@ NEXT_PUBLIC_APP_URL=https://1thedesire.com
 - [x] **가맹점 개발정보에서 키 발급** (완료 – 키는 이미 env에 설정됨)
   - `NICEPAY_CLIENT_KEY`, `NICEPAY_SECRET_KEY`, `NEXT_PUBLIC_NICEPAY_CLIENT_KEY` 참고.
 
-- [ ] **가상계좌 입금 통보 URL 등록**
-  - 가맹점관리자 → [가맹점정보] → [기본정보] → [가상계좌] (또는 결제데이터통보 설정).
-  - **입금 통보(notiUrl) URL**에 아래 주소 등록:
+- [ ] **웹훅 등록 (개발정보 > 웹훅)**
+  - **로그인 → 개발정보 → 웹훅 → 추가** 에서 **End-point** 와 **결제수단** 설정.
+  - **End-point(URL)** 에 아래 주소 등록 (유효한 도메인 필수):
     - **`https://1thedesire.com/api/payment/nicepay/webhook`**
-  - **필수**: URL 저장 후 “OK” 체크(또는 활성화) 처리.
-  - **관리자 이메일**: 통보 실패 시 재전송/알림 받을 이메일 입력.
+  - **결제수단**: **가상계좌** 선택 (가상계좌 채번·입금·환불 시 콜백).
+  - **등록 후 반드시 "TEST 호출" 버튼**으로 우리 End-point가 **200**으로 응답하는지 확인.  
+    (307 등이 나오면 등록 실패 — 아래 4.1 참고.)
+  - 실패 시 재전송은 **개발정보 > 로그 상세보기 > 웹훅 탭**에서 주문번호 검색 후 재전송.
 
-- [ ] **카드 결제 return URL**
+- [ ] **카드 결제 returnUrl**
+  - Quick guide 상 returnUrl은 “API를 호출할 Endpoint”. 결제창 인증 후 NICE가 이 URL로 **POST** 전송.
   - 실서비스 기준: **`https://1thedesire.com/api/payment/nicepay/return`**
-  - 코드에서는 `NEXT_PUBLIC_APP_URL`로 위 URL을 조합함. 가맹점관리자에 “결제 완료 후 이동 URL”이 있다면 동일하게 맞춰 두기.
+  - 샌드박스 테스트 후 운영 반영 시: JS SDK·API 도메인을 운영계로, clientId·secretKey를 운영계 KEY로 변경.
 
 ### 2.3 서버/배포 설정
 
@@ -106,21 +132,22 @@ NEXT_PUBLIC_APP_URL=https://1thedesire.com
 
 ### 4.1 웹훅 등록 실패 시 (Http status code 307)
 
-등록 시 **307**이 나오면 NICE페이 검증 요청이 **리다이렉트**를 받은 경우다.
+공식 가이드: “등록 후 **TEST 호출** 버튼으로 웹훅 전문이 정상 응답되는지 반드시 확인.”  
+**TEST 호출** 시 우리 End-point가 **200**이 아니면(예: 307) 등록이 실패한다.
+
+**307 원인**: NICE가 TEST 호출(또는 검증) 시 우리 URL을 호출할 때 **리다이렉트** 응답을 받는 경우(대표적으로 http→https 307).
 
 **우선 시도:**
 
-1. **끝에 슬래시 있는 URL로 등록**  
+1. **End-point URL을 반드시 `https://` 로 등록**  
+   `https://1thedesire.com/api/payment/nicepay/webhook` (끝 슬래시 없음)
+2. **끝에 슬래시 있는 URL로 등록**  
    `https://1thedesire.com/api/payment/nicepay/webhook/`  
-   서버에서 슬래시 있는 경로는 리다이렉트 없이 200을 주도록 rewrite 해 두었음. NICE가 내부적으로 슬래시를 붙여 호출하면 이걸로 통과할 수 있음.
+   서버에서 슬래시 경로는 리다이렉트 없이 200 주도록 rewrite 해 두었음.
+3. **개발정보 > 로그** 에서 웹훅 요청 상세 확인 — 어떤 URL/메서드로 호출했는지, 응답 코드가 뭔지 확인 후 방화벽/리다이렉트 원인 점검.
 
-2. **슬래시 없이 등록**  
-   `https://1thedesire.com/api/payment/nicepay/webhook`  
-   (항상 **https**, 끝에 `/` 없음.)
-
-3. **GET 검증**: NICE가 http GET으로 검증하면 미들웨어에서 200을 바로 반환하도록 해 둠. (호스팅이 그 전에 307을 주면 효과 없을 수 있음.)
-
-**그래도 307이면:** NICE페이 측이 검증 시 **http**로 호출하고, 호스팅(Vercel 등)이 https로 307 리다이렉트하는 경우일 수 있음. 이 경우 NICE페이 고객센터에 “웹훅 URL 검증 시 HTTPS로 호출해 달라”고 문의하는 수밖에 없음.
+**그래도 307이면:** NICE 측이 TEST 호출을 **http**로 보내고, 호스팅(Vercel 등)이 https로 307 리다이렉트하는 경우.  
+→ NICE페이 고객센터에 “웹훅 TEST 호출 시 **HTTPS**로 요청해 달라”고 문의.
 
 ---
 

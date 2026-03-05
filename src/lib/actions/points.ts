@@ -40,6 +40,7 @@ export async function createPendingNicePayCardCharge(
     .single()
 
   if (insertErr || !row) {
+    console.error('[createPendingNicePayCardCharge] point_transactions insert:', insertErr)
     return { success: false, data: null, error: { code: 'DB_ERROR', message: '충전 요청 등록에 실패했습니다' } }
   }
 
@@ -86,6 +87,7 @@ export async function createNicePayChargeRequest(
     .single()
 
   if (insertErr || !row) {
+    console.error('[createNicePayChargeRequest] point_transactions insert:', insertErr)
     return { success: false, data: null, error: { code: 'DB_ERROR', message: '충전 요청 등록에 실패했습니다' } }
   }
 
@@ -147,6 +149,7 @@ export async function createChargeRequest(
   })
 
   if (insertErr) {
+    console.error('[createChargeRequest] point_transactions insert:', insertErr)
     return { success: false, data: null, error: { code: 'DB_ERROR', message: '충전 요청 등록에 실패했습니다' } }
   }
 
