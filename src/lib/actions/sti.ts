@@ -100,6 +100,11 @@ export async function createStiVerificationSubmission(
     return { success: false, data: null, error: { code: 'FILE_TOO_LARGE', message: '파일 크기는 10MB 이하여야 합니다' } }
   }
 
+  const ALLOWED_STI_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
+  if (!ALLOWED_STI_MIMES.includes(file.type)) {
+    return { success: false, data: null, error: { code: 'INVALID_FILE_TYPE', message: 'JPG, PNG, WEBP 이미지 또는 PDF 파일만 업로드할 수 있습니다' } }
+  }
+
   const admin = createAdminClient()
 
   // 중복 제출 검사

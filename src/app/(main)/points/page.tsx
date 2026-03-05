@@ -14,7 +14,7 @@ export default async function PointsPage() {
   if (!user) redirect('/login')
 
   const [profileRes, transactionsRes] = await Promise.all([
-    supabase.from('profiles').select('points').eq('id', user.id).single(),
+    supabase.from('profiles').select('points, nickname').eq('id', user.id).single(),
     supabase
       .from('point_transactions')
       .select('*')
@@ -55,7 +55,7 @@ export default async function PointsPage() {
         </div>
 
         {/* 충전 버튼 */}
-        <ChargeSheet />
+        <ChargeSheet nickname={profile?.nickname ?? ''} />
       </header>
 
       {/* 내역 */}

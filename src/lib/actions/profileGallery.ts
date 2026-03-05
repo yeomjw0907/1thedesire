@@ -1,6 +1,7 @@
 'use server'
 
 import { createServerClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import type { ApiResponse } from '@/types'
 
 const BUCKET = 'avatars'
@@ -74,7 +75,8 @@ export async function uploadProfileGalleryImages(formData: FormData): Promise<Up
       return err('TOO_LARGE', `파일 크기는 ${MAX_SIZE_MB}MB 이하여야 합니다.`)
     }
     const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
-    const path = `${user.id}/gallery/${slot}.${ext}`
+    // 타임스탬프로 경로 고유화 → 슬롯 번호 재사용 시 스토리지 충돌 방지
+    const path = `${user.id}/gallery/${slot}_${Date.now()}.${ext}`
 
     const { error: uploadErr } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true })
     if (uploadErr) {
@@ -84,7 +86,9 @@ export async function uploadProfileGalleryImages(formData: FormData): Promise<Up
     updates[GALLERY_KEYS[slot - 1]] = publicUrl
   }
 
-  const { error: updateErr } = await supabase
+  // RLS 우회: 이미 auth.getUser()로 신원 확인 완료
+  const admin = createAdminClient()
+  const { error: updateErr } = await admin
     .from('profiles')
     .update(updates)
     .eq('id', user.id)

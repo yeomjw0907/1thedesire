@@ -32,6 +32,28 @@ export async function reportUser(
   return { success: true, data: null, error: null }
 }
 
+/** 차단 해제 (본인이 차단한 사용자만) */
+export async function unblockUser(blockedUserId: string): Promise<ApiResponse> {
+  const supabase = await createServerClient()
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return { success: false, data: null, error: { code: 'UNAUTHORIZED', message: '로그인이 필요합니다' } }
+  }
+
+  const { error } = await supabase
+    .from('blocks')
+    .delete()
+    .eq('blocker_id', user.id)
+    .eq('blocked_id', blockedUserId)
+
+  if (error) {
+    return { success: false, data: null, error: { code: 'DB_ERROR', message: '차단 해제에 실패했습니다' } }
+  }
+
+  return { success: true, data: null, error: null }
+}
+
 export async function blockUser(targetUserId: string): Promise<ApiResponse> {
   const supabase = await createServerClient()
   const admin = createAdminClient()

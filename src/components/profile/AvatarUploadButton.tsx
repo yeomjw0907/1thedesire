@@ -10,7 +10,7 @@ interface Props {
 }
 
 const MAX_SIZE_MB = 15
-const ALLOWED = ['image/jpeg', 'image/png', 'image/webp']
+const ALLOWED = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
 
 export function AvatarUploadButton({ userId: _userId, nickname, currentAvatarUrl }: Props) {
   const [avatarUrl, setAvatarUrl] = useState(currentAvatarUrl ?? null)

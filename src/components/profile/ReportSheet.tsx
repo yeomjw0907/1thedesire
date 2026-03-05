@@ -20,26 +20,39 @@ interface Props {
 export function ReportSheet({ targetUserId, targetNickname }: Props) {
   const [open, setOpen] = useState(false)
   const [reason, setReason] = useState('')
+  const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [done, setDone] = useState(false)
 
   function handleReport() {
     if (!reason) return
+    setError(null)
     startTransition(async () => {
-      await reportUser(targetUserId, reason)
-      setDone(true)
-      setTimeout(() => {
-        setOpen(false)
-        setDone(false)
-        setReason('')
-      }, 1400)
+      const result = await reportUser(targetUserId, reason)
+      if (result.success) {
+        setDone(true)
+        setTimeout(() => {
+          setOpen(false)
+          setDone(false)
+          setReason('')
+        }, 1400)
+      } else {
+        setError(result.error?.message ?? '신고 접수에 실패했습니다.')
+      }
     })
+  }
+
+  function handleOpen() {
+    setError(null)
+    setReason('')
+    setDone(false)
+    setOpen(true)
   }
 
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
+        onClick={handleOpen}
         className="px-3 py-1.5 text-text-muted text-sm active:text-text-secondary transition-colors"
       >
         신고
@@ -61,6 +74,12 @@ export function ReportSheet({ targetUserId, targetNickname }: Props) {
             <p className="text-text-muted text-sm mb-5">
               불편하거나 부적절한 행동이 있었다면 알려주세요
             </p>
+
+            {error && (
+              <div className="mb-4 px-4 py-3 bg-state-danger/10 rounded-xl text-state-danger text-sm border border-state-danger/20">
+                {error}
+              </div>
+            )}
 
             {done ? (
               <div className="py-6 text-center text-trust-400 text-sm">

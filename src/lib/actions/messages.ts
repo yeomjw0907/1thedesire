@@ -212,10 +212,15 @@ export async function markMessagesAsRead(
   if (idsToMark.length === 0) return { success: true, data: null, error: null }
 
   const now = new Date().toISOString()
-  await admin
+  const { error: readErr } = await admin
     .from('messages')
     .update({ read_at: now })
     .in('id', idsToMark)
+
+  if (readErr) {
+    console.error('[markMessagesAsRead] update failed:', readErr)
+    // 읽음 처리는 best-effort: DB 실패해도 사용자 경험에 치명적이지 않음
+  }
 
   return { success: true, data: null, error: null }
 }
@@ -241,13 +246,17 @@ export async function deleteMessage(messageId: string): Promise<ApiResponse> {
   if (message.sender_id !== user.id) return err('FORBIDDEN', '본인 메시지만 삭제할 수 있습니다')
   if (message.message_status === 'deleted') return err('ALREADY_DELETED', '이미 삭제된 메시지입니다')
 
-  await admin
+  const { error: deleteErr } = await admin
     .from('messages')
     .update({
       message_status: 'deleted',
       deleted_at: new Date().toISOString(),
     })
     .eq('id', messageId)
+
+  if (deleteErr) {
+    return err('DB_ERROR', '메시지 삭제에 실패했습니다')
+  }
 
   return { success: true, data: null, error: null }
 }

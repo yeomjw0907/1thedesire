@@ -39,10 +39,11 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // OAuth 콜백, 공개 API, 법률 문서 페이지는 항상 통과
+  // OAuth 콜백, 공개 API, 결제(웹훅/return), 법률 문서 페이지는 항상 통과
   if (
     pathname.startsWith('/auth/callback') ||
     pathname.startsWith('/api/legal') ||
+    pathname.startsWith('/api/payment') ||
     pathname.startsWith('/legal')
   ) {
     return supabaseResponse
@@ -87,8 +88,8 @@ export async function middleware(request: NextRequest) {
   }
 
   // admin 사용자는 프로필 없이도 전체 접근 허용
-  const adminEmails = (process.env.ADMIN_EMAILS ?? '').split(',').map(e => e.trim())
-  const isAdmin = adminEmails.includes(user.email ?? '')
+  const adminEmails = (process.env.ADMIN_EMAILS ?? '').split(',').map(e => e.trim()).filter(e => e.length > 0)
+  const isAdmin = user.email ? adminEmails.includes(user.email) : false
 
   if (pathname.startsWith('/admin')) {
     return supabaseResponse

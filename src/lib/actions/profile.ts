@@ -127,7 +127,9 @@ export async function uploadProfileAvatar(formData: FormData): Promise<ApiRespon
   }
   const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
 
-  const { error: dbErr } = await supabase
+  // RLS 우회: 이미 auth.getUser()로 신원 확인 완료, admin 클라이언트로 확실히 반영
+  const admin = createAdminClient()
+  const { error: dbErr } = await admin
     .from('profiles')
     .update({ avatar_url: publicUrl })
     .eq('id', user.id)

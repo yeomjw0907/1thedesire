@@ -125,6 +125,7 @@ export async function adjustPoints(
 // ──────────────────────────────────────────────────────────────
 // 4. 신고 상태 업데이트
 // ──────────────────────────────────────────────────────────────
+/** 신고 상태 변경. DB: open/reviewing/resolved/dismissed. UI reviewed → resolved */
 export async function updateReportStatus(
   reportId: string,
   status: 'reviewed' | 'dismissed'
@@ -132,10 +133,11 @@ export async function updateReportStatus(
   const check = await checkAdmin()
   if (isApiResponse(check)) return check
 
+  const dbStatus = status === 'reviewed' ? 'resolved' : status
   const admin = createAdminClient()
   const { error } = await admin
     .from('reports')
-    .update({ status })
+    .update({ status: dbStatus })
     .eq('id', reportId)
 
   if (error) {

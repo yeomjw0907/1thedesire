@@ -37,6 +37,7 @@ export default async function AdminPage({
 
   const { section, reportStatus } = await searchParams
   const activeSection = section ?? 'charges'
+  // DB reports.status: open, reviewing, resolved, dismissed. UI: pending(미처리)=open, reviewed(검토완료)=resolved, dismissed=dismissed
   const activeReportFilter = (reportStatus === 'pending' || reportStatus === 'reviewed' || reportStatus === 'dismissed') ? reportStatus : 'all'
 
   const admin = createAdminClient()
@@ -77,8 +78,14 @@ export default async function AdminPage({
   const matchCount = statCounts.agreed ?? 0
   const moderationLogs = moderationLogsRes.data ?? []
   const stiActiveCount = stiActiveRes.count ?? 0
-  const reportsFiltered = (reports ?? []).filter((r) => activeReportFilter === 'all' || r.status === activeReportFilter)
-  const pendingReportsCount = (reports ?? []).filter((r) => r.status === 'pending').length
+  const reportsFiltered = (reports ?? []).filter((r) => {
+    if (activeReportFilter === 'all') return true
+    if (activeReportFilter === 'pending') return r.status === 'open' || r.status === 'reviewing'
+    if (activeReportFilter === 'reviewed') return r.status === 'resolved'
+    if (activeReportFilter === 'dismissed') return r.status === 'dismissed'
+    return true
+  })
+  const pendingReportsCount = (reports ?? []).filter((r) => r.status === 'open' || r.status === 'reviewing').length
 
   return (
     <div>
@@ -270,7 +277,7 @@ export default async function AdminPage({
                         </p>
                       </div>
                       <div className="flex-shrink-0 text-right">
-                        <StatusBadge status={report.status ?? 'pending'} />
+                        <StatusBadge status={report.status === 'open' || report.status === 'reviewing' ? 'pending' : report.status === 'resolved' ? 'reviewed' : report.status ?? 'pending'} />
                         <p className="text-text-muted text-[10px] mt-1">{formatDate(report.created_at)}</p>
                       </div>
                     </div>
