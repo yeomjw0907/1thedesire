@@ -146,8 +146,38 @@ NEXT_PUBLIC_APP_URL=https://1thedesire.com
    서버에서 슬래시 경로는 리다이렉트 없이 200 주도록 rewrite 해 두었음.
 3. **개발정보 > 로그** 에서 웹훅 요청 상세 확인 — 어떤 URL/메서드로 호출했는지, 응답 코드가 뭔지 확인 후 방화벽/리다이렉트 원인 점검.
 
-**그래도 307이면:** NICE 측이 TEST 호출을 **http**로 보내고, 호스팅(Vercel 등)이 https로 307 리다이렉트하는 경우.  
-→ NICE페이 고객센터에 “웹훅 TEST 호출 시 **HTTPS**로 요청해 달라”고 문의.
+**그래도 307이면 (가능성 높음):**  
+NICE 측이 웹훅 TEST 호출을 **HTTP**로 보내고, 호스팅(Vercel)이 **HTTPS**로 307 리다이렉트하는 경우입니다.  
+Vercel은 경로별로 “HTTP→HTTPS 리다이렉트 끄기”를 지원하지 않아, 우리 코드만으로는 307을 막을 수 없습니다.
+
+**해결:** NICE페이에 웹훅 검증을 **HTTPS**로 해 달라고 요청해야 합니다.
+
+- **1:1 문의/고객센터** 에 아래 내용으로 문의하면 됩니다.
+
+---
+
+**[문의 예시]**
+
+제목: 웹훅(URL 통보) 등록 시 Http status code 307 오류
+
+내용:
+- 웹훅 End-point를 https://1thedesire.com/api/payment/nicepay/webhook 로 등록하려고 합니다.
+- 브라우저에서 해당 URL로 직접 접속하면 200 OK가 정상 반환됩니다.
+- 그런데 웹훅 등록 또는 TEST 호출 시에 한해 “Http status code : 307” 로 실패합니다.
+- 저희 서버는 Vercel 등 호스팅에서 HTTP 요청을 HTTPS로 307 리다이렉트하고 있어, 웹훅 검증/TEST 호출을 **HTTP**로 하시면 307이 발생하는 것으로 보입니다.
+- **웹훅 URL 검증 및 TEST 호출 시 요청을 HTTPS(https://) 로 보내 주실 수 있는지** 확인 부탁드립니다.
+
+### 4.2 307 추가로 시도할 것: 도메인 정규화 (www vs 비www)
+
+Vercel·다른 호스팅에서 **웹훅 307/308**이 나는 경우, **도메인 리다이렉트** 때문일 수 있다.  
+(예: `1thedesire.com` → `www.1thedesire.com` 또는 그 반대.)
+
+- **Vercel**: 프로젝트 **Settings → Domains** 에서 **Primary 도메인**이 뭔지 확인.
+- 웹훅 URL은 **리다이렉트되지 않는, 실제 서비스에 쓰는 그 주소**로 등록.
+  - Primary가 `https://1thedesire.com` 이면 → `https://1thedesire.com/api/payment/nicepay/webhook`
+  - Primary가 `https://www.1thedesire.com` 이면 → `https://www.1thedesire.com/api/payment/nicepay/webhook`
+- 브라우저에서 **주소창에 그 URL을 그대로 입력**했을 때 리다이렉트 없이 200이 나와야 한다.  
+  한 번 리다이렉트되면 NICE가 307을 받을 수 있으므로, **리다이렉트되는 쪽 URL은 웹훅에 쓰지 말 것.**
 
 ---
 
@@ -159,3 +189,22 @@ NEXT_PUBLIC_APP_URL=https://1thedesire.com
 4. **DB**: `point_transactions.payment_moid`, `payment_provider` 컬럼 및 `approve_charge_atomic` RPC 적용 여부 (`202603150001`, `202603140001` 마이그레이션 적용).
 
 위 체크리스트와 매뉴얼 확인 후, 발급·설정을 마치면 가상계좌 연동을 마무리할 수 있습니다.
+
+---
+
+## 6. 307이 해결되지 않을 때: 대안 PG
+
+NICE 웹훅 307이 계속되고, NICE 측 HTTPS 검증 적용이 어렵다면 **다른 PG**로 가상계좌를 연동하는 선택지가 있다.  
+Vercel·Next.js 환경에서 웹훅/가상계좌 연동 사례가 많고, 문서가 잘 되어 있는 쪽을 추천한다.
+
+| PG | 가상계좌 | 웹훅 | 특징 |
+|----|----------|------|------|
+| **토스페이먼츠** | ○ (API·결제창 둘 다) | ○ (입금 알림 등), 10초 내 200 필수 | 문서·SDK 양호, 국내 서비스 연동 사례 많음. [가상계좌 API](https://docs.tosspayments.com/guides/payment/virtual-account-api), [웹훅](https://docs.tosspayments.com/guides/v2/webhook) |
+| **포트원(아임포트)** | ○ (여러 PG 통합) | PG별 상이 | NICE·토스·다날 등 여러 PG를 하나의 API로. PG 교체 시 포트원 한 곳만 바꾸면 됨. [포트원](https://portone.io) |
+| **다날** | ○ | ○ | 가상계좌·입금 기한 등 지원. [다날 개발자센터](https://developers.danalpay.com) |
+
+**추천 방향**
+
+- **우선**: 위 **4.2 도메인 정규화**까지 적용해서 NICE 웹훅 URL을 **리다이렉트 없는 정확한 주소**로 다시 등록해 보고, 그래도 307이면 NICE 1:1 문의(HTTPS 검증 요청).
+- **전환 검토**: NICE가 어렵다면 **토스페이먼츠**가 문서·가상계좌 API·웹훅 명세가 명확하고, Next.js/Vercel 연동 예제도 많아서 이전이 수월한 편이다. (기존 NICE 카드 결제는 유지하고 가상계좌만 토스로 두는 식도 가능.)
+- **통합 유지**: 여러 PG를 한 번에 쓰거나 나중에 PG를 바꿀 가능성이 있으면 **포트원**으로 통합해 두면, PG사별 웹훅/도메인 이슈를 포트원 한 곳 기준으로만 맞추면 된다.
