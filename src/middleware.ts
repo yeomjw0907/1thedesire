@@ -39,6 +39,16 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // 웹훅 URL 검증: NICE가 http GET으로 검증하면 호스팅이 307 리다이렉트함. GET이면 여기서 200 반환
+  const isWebhookPath =
+    pathname === '/api/payment/nicepay/webhook' || pathname === '/api/payment/nicepay/webhook/'
+  if (isWebhookPath && request.method === 'GET') {
+    const proto = request.headers.get('x-forwarded-proto') ?? request.nextUrl.protocol.replace(':', '')
+    if (proto === 'http') {
+      return new NextResponse('OK', { status: 200, headers: { 'Content-Type': 'text/plain' } })
+    }
+  }
+
   // OAuth 콜백, 공개 API, 결제(웹훅/return), 법률 문서 페이지는 항상 통과
   if (
     pathname.startsWith('/auth/callback') ||

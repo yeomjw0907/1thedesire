@@ -106,14 +106,21 @@ NEXT_PUBLIC_APP_URL=https://1thedesire.com
 
 ### 4.1 웹훅 등록 실패 시 (Http status code 307)
 
-등록 시 **307**이 나오면 NICE페이 검증 요청이 **리다이렉트**를 받은 경우다. 대부분 **http → https** 리다이렉트 때문이다.
+등록 시 **307**이 나오면 NICE페이 검증 요청이 **리다이렉트**를 받은 경우다.
 
-- **URL을 반드시 `https://`로 등록**: `https://1thedesire.com/api/payment/nicepay/webhook`  
-  (앞에 `http://` 없이, **https**만 사용.)
-- **끝에 슬래시 없이** 등록: `/webhook` 까지만, `/webhook/` (X).
-- 서버에는 **GET** 요청에도 200을 반환하는 핸들러가 있어서, GET으로 검증해도 등록이 통과되도록 되어 있음.
+**우선 시도:**
 
-그래도 307이면 호스팅(Vercel 등)에서 해당 경로에 대한 리다이렉트가 있는지 확인.
+1. **끝에 슬래시 있는 URL로 등록**  
+   `https://1thedesire.com/api/payment/nicepay/webhook/`  
+   서버에서 슬래시 있는 경로는 리다이렉트 없이 200을 주도록 rewrite 해 두었음. NICE가 내부적으로 슬래시를 붙여 호출하면 이걸로 통과할 수 있음.
+
+2. **슬래시 없이 등록**  
+   `https://1thedesire.com/api/payment/nicepay/webhook`  
+   (항상 **https**, 끝에 `/` 없음.)
+
+3. **GET 검증**: NICE가 http GET으로 검증하면 미들웨어에서 200을 바로 반환하도록 해 둠. (호스팅이 그 전에 307을 주면 효과 없을 수 있음.)
+
+**그래도 307이면:** NICE페이 측이 검증 시 **http**로 호출하고, 호스팅(Vercel 등)이 https로 307 리다이렉트하는 경우일 수 있음. 이 경우 NICE페이 고객센터에 “웹훅 URL 검증 시 HTTPS로 호출해 달라”고 문의하는 수밖에 없음.
 
 ---
 
